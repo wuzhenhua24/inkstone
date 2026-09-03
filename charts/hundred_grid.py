@@ -44,7 +44,7 @@ def hundred_grid(data, title=None, subtitle=None, source=None,
 
     lg_x = x0 + grid_w + 14
     lg_line = T.SIZE["label"] + 5.0
-    top = S.head_height(title, subtitle)
+    top = S.head_height(title, subtitle, W)
     H = top + max(grid_h, lg_line * len(data)) + T.GAP["plot_source"] + T.SIZE["source"]
 
     # 按占比降序上墨：最大的一块最黑

@@ -21,7 +21,7 @@ def rank_bars(data, title=None, subtitle=None, source=None,
     row_gap = 9.0
     row_h = lab_h + 3.0 + bar_h + row_gap
 
-    top = S.head_height(title, subtitle)
+    top = S.head_height(title, subtitle, W)
     plot_h = row_h * len(data) - row_gap
     H = top + plot_h + T.GAP["plot_source"] + T.SIZE["source"] + 6
 

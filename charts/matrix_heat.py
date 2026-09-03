@@ -42,7 +42,7 @@ def matrix_heat(rows, cols, values, title=None, subtitle=None, source=None,
         return min(len(T.HEAT) - 1, int((v - lo) / (hi - lo) * len(T.HEAT)))
 
     col_lab_h = T.SIZE["label"] + 5
-    top = S.head_height(title, subtitle)
+    top = S.head_height(title, subtitle, W)
     grid_top = top + col_lab_h
     grid_h = ch * len(rows)
 

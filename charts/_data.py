@@ -39,3 +39,29 @@ def nice_ticks(lo, hi, n=6):
         v += step
     out.append(round(v, 10))
     return out
+
+
+def quantile(xs, q):
+    """线性插值分位数（与 numpy 默认的 type 7 一致）。"""
+    s = sorted(xs)
+    if len(s) == 1:
+        return float(s[0])
+    pos = (len(s) - 1) * q
+    lo = int(math.floor(pos))
+    hi = min(lo + 1, len(s) - 1)
+    return s[lo] + (s[hi] - s[lo]) * (pos - lo)
+
+
+def five_number(xs, whisker=1.5):
+    """五数概括 + 异常值（1.5 IQR 规则）。
+
+    须线止于「最远的非异常值」，不是止于 Q1/Q3±1.5IQR 那个计算值——
+    后者会画出一条并不存在的数据端点。
+    """
+    q1, med, q3 = quantile(xs, .25), quantile(xs, .5), quantile(xs, .75)
+    iqr = q3 - q1
+    lof, hif = q1 - whisker * iqr, q3 + whisker * iqr
+    inl = [v for v in xs if lof <= v <= hif]
+    return {"q1": q1, "med": med, "q3": q3, "n": len(xs),
+            "lo": min(inl) if inl else q1, "hi": max(inl) if inl else q3,
+            "outliers": sorted(v for v in xs if v < lof or v > hif)}

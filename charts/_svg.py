@@ -66,6 +66,43 @@ def ellipsize(s: str, max_w: float, size_pt: float) -> str:
     return out + mark if out else mark
 
 
+def wrap(s, max_w, size_pt, sep=" · "):
+    """按实测宽度折行。优先在「·」分隔处断，装不下再逐字断。
+
+    中文副题要承载口径、单位和时间范围，天生就长，85mm 单栏装不下是
+    常态而不是例外——所以折行是内建行为，不是调用方该操心的事。
+    截断会丢掉口径，比折行糟得多。
+    """
+    if text_width(s, size_pt) <= max_w:
+        return [s]
+    segs = s.split(sep)
+    lines, cur = [], ""
+    for seg in segs:
+        cand = seg if not cur else cur + sep + seg
+        if text_width(cand, size_pt) <= max_w or not cur:
+            cur = cand
+        else:
+            lines.append(cur)
+            cur = seg
+    if cur:
+        lines.append(cur)
+
+    # 单段仍然过宽（比如一个没有分隔符的长句）时逐字断
+    out = []
+    for ln in lines:
+        while text_width(ln, size_pt) > max_w:
+            cut = ""
+            for ch in ln:
+                if text_width(cut + ch, size_pt) > max_w:
+                    break
+                cut += ch
+            out.append(cut)
+            ln = ln[len(cut):]
+        if ln:
+            out.append(ln)
+    return out
+
+
 # ── 元素 ──────────────────────────────────────────────────────
 
 def text(x, y, s, size=T.SIZE["label"], fill=T.INK, weight=None,
@@ -114,14 +151,19 @@ def canvas(width_pt, height_pt, body, title=None, subtitle=None, source=None):
 
     宽高单位是 pt 并写进 width/height 属性，导出 PDF 时 1:1 落纸。
     """
+    avail = width_pt - T.PAD["left"] - T.PAD["right"]
     head = []
     y = T.PAD["top"] + T.SIZE["title"]
     if title:
-        head.append(text(T.PAD["left"], y, title, T.SIZE["title"],
-                         T.INK, T.WEIGHT["title"]))
-        y += T.GAP["title_sub"] + T.SIZE["subtitle"]
+        for ln in wrap(title, avail, T.SIZE["title"]):
+            head.append(text(T.PAD["left"], y, ln, T.SIZE["title"],
+                             T.INK, T.WEIGHT["title"]))
+            y += T.SIZE["title"] * 1.32
+        y += T.GAP["title_sub"] - T.SIZE["title"] * 1.32 + T.SIZE["subtitle"]
     if subtitle:
-        head.append(text(T.PAD["left"], y, subtitle, T.SIZE["subtitle"], T.MUTED))
+        for ln in wrap(subtitle, avail, T.SIZE["subtitle"]):
+            head.append(text(T.PAD["left"], y, ln, T.SIZE["subtitle"], T.MUTED))
+            y += T.SIZE["subtitle"] * 1.35
 
     foot = []
     if source:
@@ -138,9 +180,17 @@ def canvas(width_pt, height_pt, body, title=None, subtitle=None, source=None):
 </svg>'''
 
 
-def head_height(title=None, subtitle=None):
-    """标题区占用的高度，供图形区计算起始 y。"""
+def head_height(title=None, subtitle=None, width_pt=None):
+    """标题区占用的高度，供图形区计算起始 y。
+
+    传 width_pt 才能算准——标题和副题都可能折行，行数由版心宽度决定。
+    """
+    avail = (width_pt - T.PAD["left"] - T.PAD["right"]) if width_pt else None
     h = T.PAD["top"]
-    if title:    h += T.SIZE["title"] + T.GAP["title_sub"]
-    if subtitle: h += T.SIZE["subtitle"]
+    if title:
+        n = len(wrap(title, avail, T.SIZE["title"])) if avail else 1
+        h += T.SIZE["title"] * (1.32 * (n - 1) + 1) + T.GAP["title_sub"]
+    if subtitle:
+        n = len(wrap(subtitle, avail, T.SIZE["subtitle"])) if avail else 1
+        h += T.SIZE["subtitle"] * (1.35 * (n - 1) + 1)
     return h + T.GAP["sub_plot"]

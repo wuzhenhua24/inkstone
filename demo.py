@@ -9,6 +9,8 @@ from charts.day_series import day_series
 from charts.hundred_grid import hundred_grid
 from charts.beeswarm import beeswarm
 from charts.matrix_heat import matrix_heat
+from charts.tick_box import tick_box
+from charts.line_family import line_family
 from charts._data import rnd
 from scripts.render import render
 
@@ -88,4 +90,44 @@ render(matrix_heat(
     column="double",
 ), "m1-matrix-heat")
 
-print("已渲染 5 张，产物在 out/")
+# ── D3 五数摘要 ──────────────────────────────────────────────
+BOX = [("华东", 60, 4.2, 1.6), ("华南", 55, 5.1, 1.4), ("华北", 48, 6.8, 2.2),
+       ("西南", 44, 7.5, 1.9), ("华中", 40, 6.1, 1.7), ("东北", 36, 9.2, 2.8)]
+boxes = []
+for gi, (name, cnt, center, spread) in enumerate(BOX):
+    vs = []
+    for i in range(cnt):
+        v = center + spread * (rnd(i, gi + 11) - 0.45) * 2
+        if rnd(i, gi + 55) > 0.94:
+            v += spread * 4.5
+        vs.append(round(max(0.4, v), 1))
+    boxes.append((name, vs))
+
+render(tick_box(
+    boxes,
+    title="东北的工单响应时长中位数最高，且拖尾最重",
+    subtitle="首次响应时长分位数 · 箱=四分位距 · 点=异常值 · 单位：小时",
+    source="数据来源：工单系统 · N=283 · 异常值按 1.5 IQR 判定",
+    column="single",
+), "d3-tick-box")
+
+# ── S2 细线族 ────────────────────────────────────────────────
+LINE = [("企业微信", 62, 4.6), ("钉钉", 58, 2.1), ("飞书", 40, 5.2),
+        ("Teams", 34, 1.1), ("Slack", 26, -0.9)]
+lines = []
+for si, (name, start, slope) in enumerate(LINE):
+    vs, v = [], start
+    for i in range(12):
+        v += slope + 6 * (rnd(i, si + 3) - 0.5)
+        vs.append(round(max(4, v), 1))
+    lines.append((name, vs))
+
+render(line_family(
+    lines, [f"{m}月" for m in range(1, 13)],
+    title="飞书全年增速最快，Slack 是唯一下滑的",
+    subtitle="月度活跃企业数 · 单位：千家 · 2026 年",
+    source="数据来源：内部装机统计",
+    column="double",
+), "s2-line-family")
+
+print("已渲染 7 张，产物在 out/")

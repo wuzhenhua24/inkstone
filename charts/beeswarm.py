@@ -69,7 +69,7 @@ def beeswarm(groups, title=None, subtitle=None, source=None,
 
     lab_h = T.SIZE["label"]
     axis_h = T.SIZE["label"] + 8
-    top = S.head_height(title, subtitle)
+    top = S.head_height(title, subtitle, W)
 
     # 先装箱，再按实际堆叠高度定每组的行高——留固定高度要么浪费要么截断
     packed, halves = [], []

@@ -26,7 +26,7 @@ def day_series(data, title=None, subtitle=None, source=None,
     plot_h = 62.0
     axis_h = T.SIZE["label"] + 6
 
-    top = S.head_height(title, subtitle)
+    top = S.head_height(title, subtitle, W)
     base_y = top + annot_h + plot_h    # 基线
     H = base_y + axis_h + T.GAP["plot_source"] + T.SIZE["source"] + 4
 
