@@ -1,0 +1,44 @@
+name: ci
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.9 是开发机版本，3.13 用来提前发现新版行为差异。
+        # 项目零第三方依赖，所以矩阵跑起来很便宜。
+        python: ['3.9', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      # librsvg 提供 rsvg-convert（SVG → PDF/PNG）；
+      # noto-cjk 让 runner 上真的有中日韩字形，否则导出的 PDF 里
+      # 汉字会变成豆腐块，「能导出」这条就没被真正验证。
+      - name: 安装 rsvg-convert 与中文字体
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends librsvg2-bin fonts-noto-cjk
+          rsvg-convert --version | head -1
+          fc-list :lang=zh family | head -3
+
+      - name: 跑测试
+        run: python3 tests/run.py
+
+      - name: 保留产物
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: charts-py${{ matrix.python }}
+          path: out/
+          retention-days: 7
+          if-no-files-found: error
