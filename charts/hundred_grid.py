@@ -5,6 +5,7 @@ import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tokens as T
 from charts import _svg as S
+from charts._data import decimals_for
 
 MAX_CATS = 6
 
@@ -73,13 +74,13 @@ def hundred_grid(data, title=None, subtitle=None, source=None,
                             T.GRAY[0], 0.7))
 
     # 图例：一类一行，竖排。中文类目名不能缩写，横排图例在 85mm 里必然折行。
-    decimals = any(abs(p - round(p)) > 0.05 for p in pct)
+    decimals = decimals_for(pct)
     lg_avail = x1 - lg_x
     for row, idx in enumerate(order):
         y = top + T.SIZE["label"] + row * lg_line
         sw = T.SIZE["label"] * 0.8
         parts.append(S.rect(lg_x, y - sw + 0.5, sw, sw, ink_of[idx]))
-        val = f"{pct[idx]:.1f}%" if decimals else f"{pct[idx]:.0f}%"
+        val = f"{pct[idx]:.{decimals}f}%"
         vw = S.text_width(val, T.SIZE["value"])
         parts.append(S.text(lg_x + sw + 3.5, y,
                             S.ellipsize(data[idx][0], lg_avail - sw - vw - 8, T.SIZE["label"]),

@@ -65,3 +65,16 @@ def five_number(xs, whisker=1.5):
     return {"q1": q1, "med": med, "q3": q3, "n": len(xs),
             "lo": min(inl) if inl else q1, "hi": max(inl) if inl else q3,
             "outliers": sorted(v for v in xs if v < lof or v > hif)}
+
+
+def decimals_for(vals, eps=0.05):
+    """一组数该保留几位小数：有一个带小数，全组就都带。
+
+    `:g` 会把 95.0 写成「95」而把 99.8 写成「99.8」，同一格网格里
+    小数位参差不齐，读者会以为精度不同。
+    """
+    return 1 if any(abs(v - round(v)) > eps for v in vals) else 0
+
+
+def fmt(v, decimals=0):
+    return f"{v:,.{decimals}f}"

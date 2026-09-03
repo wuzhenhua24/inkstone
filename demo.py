@@ -11,6 +11,7 @@ from charts.beeswarm import beeswarm
 from charts.matrix_heat import matrix_heat
 from charts.tick_box import tick_box
 from charts.line_family import line_family
+from charts.small_multiples import small_multiples
 from charts._data import rnd
 from scripts.render import render
 
@@ -130,4 +131,23 @@ render(line_family(
     column="double",
 ), "s2-line-family")
 
-print("已渲染 7 张，产物在 out/")
+# ── S3 小倍数网格 ────────────────────────────────────────────
+GRID = [("华东", 88, 3.4), ("华南", 74, 2.2), ("华北", 66, 1.1), ("西南", 58, 2.8),
+        ("华中", 52, 0.6), ("东北", 41, -1.2), ("西北", 33, 1.6), ("港澳台", 24, 0.4)]
+grid = []
+for si, (name, start, slope) in enumerate(GRID):
+    vs, v = [], start
+    for i in range(12):
+        v += slope + 7 * (rnd(i, si + 17) - 0.5)
+        vs.append(round(max(3, v), 1))
+    grid.append((name, vs))
+
+render(small_multiples(
+    grid, [f"{m}月" for m in range(1, 13)],
+    title="八个区域里只有东北全年走低",
+    subtitle="月度新签合同数 · 单位：份 · 2026 年",
+    source="数据来源：CRM 合同台账",
+    column="double",
+), "s3-small-multiples")
+
+print("已渲染 8 张，产物在 out/")
