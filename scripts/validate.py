@@ -66,6 +66,25 @@ def check(path):
         if left < -0.5 or left + tw > w + 0.5:
             fails.append(f"文本出血（{left:.1f}→{left+tw:.1f} 超出 0→{w:.1f}）：{s[:18]!r}")
 
+    # 5.1 · 声明了底色的文字，其包围盒必须真的落在那块底色里。
+    #      白字飘出深色块半个字，灰度审阅时看不出来，只能靠机器判。
+    for el in root.iter(f"{NS}text"):
+        box = el.get("data-on-box")
+        if not box:
+            continue
+        bx, by, bw, bh = (float(v) for v in box.split(","))
+        st = "".join(el.itertext())
+        size, tx, ty = float(el.get("font-size", "0")), float(el.get("x", "0")), float(el.get("y", "0"))
+        tw = S.text_width(st, size)
+        anchor = el.get("text-anchor", "start")
+        left = tx - tw if anchor == "end" else (tx - tw / 2 if anchor == "middle" else tx)
+        # y 是基线。CJK 字面顶约在基线上方 0.88em，底约在下方 0.12em。
+        top_y, bot_y = ty - size * 0.88, ty + size * 0.12
+        if (left < bx - 0.5 or left + tw > bx + bw + 0.5
+                or top_y < by - 0.5 or bot_y > by + bh + 0.5):
+            fails.append(f"文字超出其声明的底色块：{st[:14]!r} "
+                         f"({left:.1f}→{left+tw:.1f}) 不在 ({bx:.1f}→{bx+bw:.1f}) 内")
+
     # 4 · 线宽地板：0.35pt 以下胶印和激光打印都会断线
     for el in root.iter():
         sw = el.get("stroke-width")
@@ -133,6 +152,10 @@ def check_tokens():
         d = abs(lstar(T.GRAY[i]) - lstar(T.GRAY[i + 1]))
         if d < 10:
             fails.append(f"GRAY[{i}] 与 GRAY[{i+1}] 只差 {d:.1f} L*，印出来分不开")
+    for k, v in T.SIZE.items():
+        if v < T.MIN_CJK_PT:
+            fails.append(f"SIZE['{k}']={v}pt 低于 CJK 下限 {T.MIN_CJK_PT}pt——"
+                         f"含中文时会被静默抬高，所有按此值算的宽度都会偏小")
     for i, c in enumerate(T.GRAY[:T.TEXT_SAFE_MAX + 1]):
         if contrast(c, T.PAPER) < 4.5:
             fails.append(f"GRAY[{i}]={c} 号称文字安全档，但对纸只有 "

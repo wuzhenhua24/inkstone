@@ -78,3 +78,31 @@ def decimals_for(vals, eps=0.05):
 
 def fmt(v, decimals=0):
     return f"{v:,.{decimals}f}"
+
+
+def linreg(xs, ys):
+    """最小二乘直线 + 皮尔逊 r。返回 (斜率, 截距, r)。"""
+    n = len(xs)
+    mx, my = sum(xs) / n, sum(ys) / n
+    sxx = sum((x - mx) ** 2 for x in xs)
+    syy = sum((y - my) ** 2 for y in ys)
+    sxy = sum((x - mx) * (y - my) for x, y in zip(xs, ys))
+    slope = sxy / sxx if sxx else 0.0
+    r = sxy / math.sqrt(sxx * syy) if sxx and syy else 0.0
+    return slope, my - slope * mx, r
+
+
+def histogram(xs, bins=None):
+    """等宽分箱。箱边取人读得懂的整数，不是 min/max 直接均分——
+    「12.37–19.84」这种箱标签没人愿意读。返回 (箱边, 各箱计数)。"""
+    lo, hi = min(xs), max(xs)
+    if bins is None:
+        bins = max(5, min(14, int(len(xs) ** 0.5)))
+    edges = nice_ticks(lo, hi, bins)
+    counts = [0] * (len(edges) - 1)
+    for v in xs:
+        k = 0
+        while k < len(counts) - 1 and v >= edges[k + 1]:
+            k += 1
+        counts[k] += 1
+    return edges, counts

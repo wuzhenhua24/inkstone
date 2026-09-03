@@ -12,6 +12,11 @@ from charts.matrix_heat import matrix_heat
 from charts.tick_box import tick_box
 from charts.line_family import line_family
 from charts.small_multiples import small_multiples
+from charts.diverging_bars import diverging_bars
+from charts.dot_cascade import dot_cascade
+from charts.stacked_bands import stacked_bands
+from charts.step_histogram import step_histogram
+from charts.scatter_fit import scatter_fit
 from charts._data import rnd
 from scripts.render import render
 
@@ -150,4 +155,74 @@ render(small_multiples(
     column="double",
 ), "s3-small-multiples")
 
-print("已渲染 8 张，产物在 out/")
+# ── R2 分岔条 ────────────────────────────────────────────────
+render(diverging_bars(
+    [("自然搜索", 412), ("老客推荐", 268), ("内容投放", 96), ("线下活动", -58),
+     ("渠道分销", -184), ("电话外呼", -327)],
+    title="投放和推荐仍在净增，外呼流失最重",
+    subtitle="新签减去流失的净变化 · 单位：家 · 2026 H1 对比 H2",
+    source="数据来源：CRM 首次归因",
+    column="single",
+), "r2-diverging-bars")
+
+# ── R3 点阵瀑布 ──────────────────────────────────────────────
+render(dot_cascade(
+    [("登录失败", 1840), ("同步超时", 1260), ("附件上传失败", 910),
+     ("消息重复", 620), ("权限校验错误", 430), ("导出为空", 180)],
+    title="登录失败占了故障工单的三分之一",
+    subtitle="按故障类型统计的工单量 · 2026 H1",
+    source="数据来源：工单系统",
+    column="single", unit="件",
+), "r3-dot-cascade")
+
+# ── C2 堆叠带 ────────────────────────────────────────────────
+BAND_SPEC = [("自然搜索", 42, 1.9), ("老客推荐", 30, 1.2), ("内容投放", 20, 1.6),
+             ("渠道分销", 11, 0.2), ("线下活动", 5, 0.05)]
+band_layers = []
+for si, (name, start, slope) in enumerate(BAND_SPEC):
+    vs, v = [], start
+    for i in range(12):
+        v = max(1, v + slope + 3 * (rnd(i, si + 23) - 0.5))
+        vs.append(round(v, 1))
+    band_layers.append((name, vs))
+
+render(stacked_bands(
+    band_layers, [f"{m}月" for m in range(1, 13)],
+    title="总量全年增长，但增量几乎都来自自然搜索和内容投放",
+    subtitle="月度新签合同数构成 · 单位：份 · 2026 年",
+    source="数据来源：CRM 首次归因",
+    column="double",
+), "c2-stacked-bands")
+
+# ── D1 阶梯直方 ──────────────────────────────────────────────
+hist_vals = []
+for i in range(240):
+    v = 18 + 26 * (rnd(i, 41) + rnd(i, 42) + rnd(i, 43)) / 3
+    if rnd(i, 44) > 0.9:
+        v += 22
+    hist_vals.append(round(v, 1))
+
+render(step_histogram(
+    hist_vals,
+    title="多数账号在 25–40 分钟内完成首次配置",
+    subtitle="首次配置耗时分布 · 单位：分钟",
+    source="数据来源：引导流程埋点",
+    column="single", unit="分钟",
+), "d1-step-histogram")
+
+# ── M2 散点带回归 ────────────────────────────────────────────
+pts = []
+for i in range(86):
+    x = 4 + 30 * rnd(i, 61)
+    y = 12 + 2.1 * x + 26 * (rnd(i, 62) - 0.5)
+    pts.append((round(x, 1), round(max(3, y), 1)))
+
+render(scatter_fit(
+    pts,
+    title="接入的应用越多，月活跃天数越高",
+    subtitle="每点 = 一个企业账号 · 2026 H1",
+    source="数据来源：服务端埋点",
+    column="single", x_name="已接入应用数", y_name="月活跃天数",
+), "m2-scatter-fit")
+
+print("已渲染 13 张，产物在 out/")

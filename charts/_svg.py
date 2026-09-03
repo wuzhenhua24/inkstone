@@ -52,6 +52,13 @@ def min_size_for(s: str) -> float:
     return T.MIN_CJK_PT if has_cjk(s) else T.MIN_LATIN_PT
 
 
+def effective_size(s: str, size_pt: float) -> float:
+    """text() 实际会用的字号。请求 6.5pt 而文本含汉字时会被抬到 7.5pt，
+    此时若还按 6.5 算宽度，折行和出血判断全部偏小 15%。
+    凡是算宽度都要先过这一道。"""
+    return max(size_pt, min_size_for(s))
+
+
 def ellipsize(s: str, max_w: float, size_pt: float) -> str:
     """按实际宽度截断并加省略号。中文用全角省略号，西文用 …。"""
     if text_width(s, size_pt) <= max_w:
@@ -73,6 +80,7 @@ def wrap(s, max_w, size_pt, sep=" · "):
     常态而不是例外——所以折行是内建行为，不是调用方该操心的事。
     截断会丢掉口径，比折行糟得多。
     """
+    size_pt = effective_size(s, size_pt)      # 折行必须按生效字号算
     if text_width(s, size_pt) <= max_w:
         return [s]
     segs = s.split(sep)
@@ -106,9 +114,15 @@ def wrap(s, max_w, size_pt, sep=" · "):
 # ── 元素 ──────────────────────────────────────────────────────
 
 def text(x, y, s, size=T.SIZE["label"], fill=T.INK, weight=None,
-         anchor="start", family=None, spacing=None, baseline=None, on=None):
+         anchor="start", family=None, spacing=None, baseline=None,
+         on=None, on_box=None):
     """on: 这段文字坐在什么底色上（深色格里的数字要翻成纸白）。
-    不传就是坐在纸上。校验器读 data-on 决定拿什么背景算对比度。"""
+    on_box: 那块底色的矩形 (x, y, w, h)。
+
+    不传 on 就是坐在纸上。校验器读 data-on 算对比度，读 data-on-box
+    确认底色真的盖住了整段文字——白字有一半飘到白纸上，在灰度审阅时
+    几乎看不出来，只能靠机器判。
+    """
     size = max(size, min_size_for(str(s)))   # 字号地板在这里强制，调用处想违反也违反不了
     a = [f'x="{T.px(x)}"', f'y="{T.px(y)}"', f'font-size="{T.px(size)}"',
          f'fill="{fill}"', f'font-family="{family or T.FONT_SANS}"']
@@ -116,6 +130,8 @@ def text(x, y, s, size=T.SIZE["label"], fill=T.INK, weight=None,
     if anchor != "start": a.append(f'text-anchor="{anchor}"')
     if spacing:  a.append(f'letter-spacing="{spacing}"')
     if on:       a.append(f'data-on="{on}"')
+    if on_box:
+        a.append('data-on-box="%s"' % ",".join(str(T.px(v)) for v in on_box))
     if baseline: a.append(f'dominant-baseline="{baseline}"')
     a.append('font-variant-numeric="tabular-nums"')
     return f'<text {" ".join(a)}>{escape(str(s))}</text>'
@@ -165,10 +181,19 @@ def canvas(width_pt, height_pt, body, title=None, subtitle=None, source=None):
             head.append(text(T.PAD["left"], y, ln, T.SIZE["subtitle"], T.MUTED))
             y += T.SIZE["subtitle"] * 1.35
 
+    # 来源行同样会超长（图型会往里追加口径、n、r、标度注记）。
+    # 调用方按「一行」算高度，多出来的行数由这里补进画布——
+    # 让每张图各自去算来源行行数，只会漏。
     foot = []
     if source:
-        foot.append(text(T.PAD["left"], height_pt - 4, source, T.SIZE["source"],
-                         T.SRC, T.WEIGHT["source"], spacing="0.06em"))
+        lines = wrap(source, avail, T.SIZE["source"])
+        lh = T.SIZE["source"] * 1.4
+        height_pt += lh * (len(lines) - 1)
+        fy = height_pt - 4 - lh * (len(lines) - 1)
+        for ln in lines:
+            foot.append(text(T.PAD["left"], fy, ln, T.SIZE["source"],
+                             T.SRC, T.WEIGHT["source"], spacing="0.06em"))
+            fy += lh
 
     return f'''<svg xmlns="http://www.w3.org/2000/svg" version="1.1"
      width="{T.px(width_pt)}pt" height="{T.px(height_pt)}pt"

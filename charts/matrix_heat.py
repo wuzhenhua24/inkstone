@@ -70,7 +70,8 @@ def matrix_heat(rows, cols, values, title=None, subtitle=None, source=None,
                     gx + cw * (j + 0.5), y + ch / 2 + T.SIZE["value"] * 0.35,
                     f"{v:,g}{unit}", T.SIZE["value"],
                     T.PAPER if dark else T.GRAY[0], T.WEIGHT["value"],
-                    anchor="middle", on=bg))
+                    anchor="middle", on=bg,
+                    on_box=(gx + cw * j + 0.4, y + 0.4, cw - 0.8, ch - 0.8)))
 
     # 标度图例：五档色阶 + 两端数值
     ly = grid_top + grid_h + 12
