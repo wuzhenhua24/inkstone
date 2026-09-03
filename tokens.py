@@ -78,12 +78,61 @@ GRAY = [
 ]
 TEXT_SAFE_MAX = 3   # GRAY 下标 >3 不得用于 <text>
 
-INK = GRAY[0]
-MUTED = GRAY[2]     # 副题
-SRC = GRAY[3]       # 来源行
-RULE = GRAY[6]
-TRACK = GRAY[6]
-FAINT = GRAY[4]
+MONO = list(GRAY)   # 留一份原始灰阶，切色板后还能切回来
+ACTIVE = "mono"     # 当前色板名，会写进 SVG 供校验器取尺
+
+
+def _derive():
+    """从当前 GRAY 重算所有派生色。切换色板后必须调用。
+
+    派生色一律在这里集中算，不许各图型自己在模块顶层缓存一份——
+    那样的副本不会跟着色板走，切色后就成了灰色的孤儿。
+    """
+    g = globals()
+    g["INK"] = GRAY[0]
+    g["MUTED"] = GRAY[2]     # 副题
+    g["SRC"] = GRAY[3]       # 来源行
+    g["RULE"] = GRAY[6]
+    g["TRACK"] = GRAY[6]
+    g["FAINT"] = GRAY[4]
+    # 热力 5 档：跳过 L*50–56 死区（见下方注释）
+    g["HEAT"] = [GRAY[6], GRAY[5], GRAY[4], GRAY[1], GRAY[0]]
+    g["HEAT_FLIP"] = 3       # 下标 ≥3 是深底，格内文字翻成纸白
+    # 堆叠带 5 档：相邻 ≥12 L*，每档都存在对比度 ≥4.5:1 的文字色
+    g["BAND"] = [GRAY[0], GRAY[2], GRAY[4], GRAY[5], GRAY[6]]
+    g["BAND_FLIP"] = 2
+
+
+_derive()
+
+
+class use:
+    """切换彩色档。色相变，L* 不变——影印成灰度后和 mono 版是同一张。
+
+        with T.use("indigo"):
+            svg = rank_bars(...)
+
+    没有 with 的话切换是全局的，记得切回 "mono"。
+    """
+
+    def __init__(self, name):
+        import palettes
+        self.ramp = palettes.build(name)
+        self.name = name
+        self.prev = None
+
+    def __enter__(self):
+        self.prev, self.prev_name = list(GRAY), ACTIVE
+        GRAY[:] = self.ramp if self.ramp else MONO
+        globals()["ACTIVE"] = self.name
+        _derive()
+        return self
+
+    def __exit__(self, *exc):
+        GRAY[:] = self.prev
+        globals()["ACTIVE"] = self.prev_name
+        _derive()
+        return False
 
 
 # ─────────────────────────────────────────────────────────────
@@ -102,16 +151,10 @@ STROKE = {
 # ─────────────────────────────────────────────────────────────
 DOT = {"min_r": 0.35, "r": 1.6, "gap": 0.4}
 
-# ─────────────────────────────────────────────────────────────
-# 热力档位：灰阶做连续标度不可靠——人眼在无参照时分不出 60% 灰和
-# 68% 灰。所以量化成 5 档，并在格内直接标数值。
-#
-# 档位要跳过 L*50–56 这条死区：在这一带，深字对底不到 4.5:1，白字
-# 也不到 4.5:1，两种文字色都不合格。一条要在格内承载数字的标度，
-# 宁可牺牲档间的感知等距，也不能落进死区。
-# ─────────────────────────────────────────────────────────────
-HEAT = [GRAY[6], GRAY[5], GRAY[4], GRAY[1], GRAY[0]]   # 由浅到深 5 档
-HEAT_FLIP = 3   # 下标 ≥3 的档位是深底，格内文字要翻成纸白
+# 热力与堆叠带的档位在 _derive() 里算。要点：档位必须跳过 L*50–56
+# 这条死区——在这一带深字对底不到 4.5:1、白字也不到 4.5:1，两种文字色
+# 都不合格。一条要在格内承载数字的标度，宁可牺牲档间的感知等距，
+# 也不能落进死区。
 
 # ─────────────────────────────────────────────────────────────
 # 间距（pt）

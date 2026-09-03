@@ -197,7 +197,8 @@ def canvas(width_pt, height_pt, body, title=None, subtitle=None, source=None):
 
     return f'''<svg xmlns="http://www.w3.org/2000/svg" version="1.1"
      width="{T.px(width_pt)}pt" height="{T.px(height_pt)}pt"
-     viewBox="0 0 {T.px(width_pt)} {T.px(height_pt)}">
+     viewBox="0 0 {T.px(width_pt)} {T.px(height_pt)}"
+     data-palette="{T.ACTIVE}">
 <rect width="100%" height="100%" fill="{T.PAPER}"/>
 {chr(10).join(head)}
 {body}

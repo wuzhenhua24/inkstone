@@ -9,6 +9,7 @@
   5 确定性    跑两次字节相同（演示数据不许用随机数）
   5.5 导出    PDF / PNG 真的产出且不是空白页
   6 目录闭环  catalog 里每个编号都有渲染产物
+  7 灰度等价  彩色版逐处用色的明度必须与 mono 版一致
 """
 import io, os, re, subprocess, sys, contextlib
 
@@ -46,11 +47,12 @@ def warn(msg):
 
 # 1 · 渲染 ─────────────────────────────────────────────────────
 group("渲染")
-r = subprocess.run([sys.executable, "demo.py"], capture_output=True, text=True)
-if r.returncode:
-    bad(f"demo.py 失败：{r.stderr.strip()[:200]}")
-else:
-    ok(r.stdout.strip().splitlines()[-1])
+for script in ("demo.py", "demo_palettes.py"):
+    r = subprocess.run([sys.executable, script], capture_output=True, text=True)
+    if r.returncode:
+        bad(f"{script} 失败：{r.stderr.strip()[:200]}")
+    else:
+        ok(r.stdout.strip().splitlines()[-1])
 
 svgs = sorted(f for f in os.listdir("out") if f.endswith(".svg")
               and not f.startswith("_"))
@@ -117,7 +119,8 @@ if not leaked:
 # 5 · 确定性 ───────────────────────────────────────────────────
 group("确定性")
 before = {n: open(os.path.join("out", n), "rb").read() for n in svgs}
-subprocess.run([sys.executable, "demo.py"], capture_output=True)
+for script in ("demo.py", "demo_palettes.py"):
+    subprocess.run([sys.executable, script], capture_output=True)
 drift = [n for n in svgs if open(os.path.join("out", n), "rb").read() != before[n]]
 if drift:
     bad(f"两次渲染结果不同：{', '.join(drift)}——演示数据里有随机数")
@@ -156,6 +159,41 @@ if missing:
     bad(f"catalog 有实现但 demo 没渲染：{', '.join(missing)}")
 else:
     ok(f"catalog {len(ids)} 个编号都有渲染产物")
+
+# 7 · 灰度等价 ─────────────────────────────────────────────────
+# 彩色档的全部承诺就这一条：色相可以换，明度不能换。守住它，
+# 彩色图被黑白影印之后就还是原来那张图；守不住，出版环节会毁掉它。
+group("灰度等价")
+import palettes
+from charts._color import lstar as _ls
+
+HEXPAT = re.compile(r'(?:fill|stroke|data-on)="(#[0-9A-Fa-f]{6})"')
+
+
+def _profile(path):
+    return [_ls(c) for c in HEXPAT.findall(open(path, encoding="utf-8").read())]
+
+
+worst_all = 0.0
+for chart in ("rank", "heat"):
+    base_p = os.path.join("out", f"pal-mono-{chart}.svg")
+    if not os.path.exists(base_p):
+        bad(f"缺少 mono 基准 {base_p}")
+        continue
+    base = _profile(base_p)
+    for pal in palettes.PRESETS:
+        if pal == "mono":
+            continue
+        got = _profile(os.path.join("out", f"pal-{pal}-{chart}.svg"))
+        if len(got) != len(base):
+            bad(f"{pal}/{chart} 用色处数 {len(got)} ≠ mono 的 {len(base)}")
+            continue
+        w = max(abs(a - b) for a, b in zip(base, got))
+        worst_all = max(worst_all, w)
+        if w > 1.0:
+            bad(f"{pal}/{chart} 最大明度偏差 {w:.1f} L* > 1.0——影印成灰度后和 mono 版对不上")
+if worst_all <= 1.0:
+    ok(f"3 套色板 × 2 张，最大明度偏差 {worst_all:.1f} L*")
 
 # ──────────────────────────────────────────────────────────────
 print()

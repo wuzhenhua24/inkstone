@@ -42,6 +42,16 @@ def check(path):
     root = ET.fromstring(src)
     fails = []
 
+    # 色板名写在根元素上。不读它的话，彩色图的每一处用色都会被
+    # 拿 mono 灰阶去比，全部误报。
+    import palettes
+    pname = root.get("data-palette", "mono")
+    try:
+        ramp = palettes.build(pname) or T.MONO
+    except ValueError:
+        fails.append(f"根元素声明了不存在的色板 data-palette=\"{pname}\"")
+        ramp = T.MONO
+
     # 1 · 栏宽必须落在版心表里。图不能想多宽多宽，宽度由载体决定。
     w = float(re.sub(r"[a-z]+$", "", root.get("width", "0")))
     if not any(abs(w - v) < 0.5 for v in T.COLUMN.values()):
@@ -121,13 +131,14 @@ def check(path):
 
     # 9 · 坐在纸上的文字只许用文字安全档（GRAY[0..3]）。
     #     坐在深色格上的文字走第 5 条的对比度判定，不受这条约束。
-    safe = set(c.upper() for c in T.GRAY[:T.TEXT_SAFE_MAX + 1])
+    safe = set(c.upper() for c in ramp[:T.TEXT_SAFE_MAX + 1])
     for el in root.iter(f"{NS}text"):
         if el.get("data-on"):
             continue
         f = (el.get("fill") or "").upper()
         if f.startswith("#") and f not in safe:
-            fails.append(f"文字用了填充档灰 {f}——纸上的文字只许 GRAY[0..{T.TEXT_SAFE_MAX}]")
+            fails.append(f"文字用了填充档色 {f}——纸上的文字只许 {pname} 色板的 "
+                         f"0..{T.TEXT_SAFE_MAX} 级")
             break
 
     # 8 · 字体栈必须中西分家（拉丁在前、CJK 在后，靠逐字符 fallback）
@@ -152,6 +163,10 @@ def check_tokens():
         d = abs(lstar(T.GRAY[i]) - lstar(T.GRAY[i + 1]))
         if d < 10:
             fails.append(f"GRAY[{i}] 与 GRAY[{i+1}] 只差 {d:.1f} L*，印出来分不开")
+    import palettes
+    for name in palettes.PRESETS:
+        for m in palettes.audit(name):
+            fails.append(m)
     for k, v in T.SIZE.items():
         if v < T.MIN_CJK_PT:
             fails.append(f"SIZE['{k}']={v}pt 低于 CJK 下限 {T.MIN_CJK_PT}pt——"

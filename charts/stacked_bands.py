@@ -9,9 +9,6 @@ from charts._data import nice_ticks, decimals_for, fmt
 from charts.line_family import _place_labels
 
 MAX_LAYERS = 5
-# 带的填充档：相邻两档 ≥12 L*，且每一档都存在一种对比度 ≥4.5:1 的文字色
-BAND = [T.GRAY[0], T.GRAY[2], T.GRAY[4], T.GRAY[5], T.GRAY[6]]
-BAND_FLIP = 2   # 下标 <2 的是深带，带内文字翻成纸白
 
 
 # ════ C2 堆叠带 ════
@@ -62,7 +59,7 @@ def stacked_bands(layers, x_labels, title=None, subtitle=None, source=None,
         top_pts = [f"{T.px(sx(i))} {T.px(sy(upper[i]))}" for i in range(n)]
         bot_pts = [f"{T.px(sx(i))} {T.px(sy(lower[i]))}" for i in range(n - 1, -1, -1)]
         d = "M" + " L".join(top_pts + bot_pts) + " Z"
-        parts.append(f'<path d="{d}" fill="{BAND[li]}"/>')
+        parts.append(f'<path d="{d}" fill="{T.BAND[li]}"/>')
         bands.append((name, list(lower), upper))
         lower = upper
 
@@ -107,8 +104,8 @@ def stacked_bands(layers, x_labels, title=None, subtitle=None, source=None,
     for li, name, w, cx, cy in inside:
         # 声明底色矩形，让校验器确认底色真的盖住了整段文字
         parts.append(S.text(cx, cy + T.SIZE["label"] * 0.35, name, T.SIZE["label"],
-                            T.PAPER if li < BAND_FLIP else T.GRAY[0],
-                            T.WEIGHT["value"], anchor="middle", on=BAND[li],
+                            T.PAPER if li < T.BAND_FLIP else T.GRAY[0],
+                            T.WEIGHT["value"], anchor="middle", on=T.BAND[li],
                             on_box=(cx - w / 2, cy - need / 2, w, need)))
 
     if outside:
