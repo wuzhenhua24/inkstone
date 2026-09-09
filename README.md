@@ -1,8 +1,6 @@
 # Inkstone
 
-<!-- 推到 GitHub 后把 OWNER 换成账号名，取消下一行注释
-![ci](https://github.com/OWNER/inkstone/actions/workflows/ci.yml/badge.svg)
--->
+[![ci](https://github.com/wuzhenhua24/inkstone/actions/workflows/ci.yml/badge.svg)](https://github.com/wuzhenhua24/inkstone/actions/workflows/ci.yml)
 
 中文优先的**静态印刷**图表 skill。输出矢量 SVG / PDF / 300dpi PNG，无 JavaScript 运行时，直接置入 Word、LaTeX、InDesign 和幻灯片。
 
@@ -127,8 +125,9 @@ python3 demo_palettes.py     # 出各色板样张
 「类目上限」列里写了数字的，是否都标了「代码强制」并真的由代码拦住 ·
 分区标题是否还挂着「待建」而底下已经有实现
 
-**README 自身**：结构块里「N 行」的声明是否属实 · 图型表的行数是否等于 catalog 声明的张数
-（这两个数我修 bug 时手动同步过两次，第三次一定会忘——所以交给机器）
+**README 自身**：结构块里「N 行」的声明是否属实 · 图型表的行数是否等于 catalog 声明的张数 ·
+CI 徽标指向的 workflow 文件是否存在（徽标坏掉不报错，只会永远显示一张
+「workflow not found」的灰图，而所有人都只当它是还没跑完）
 
 **token 自身**：热力档位是否落进 L\*50–56 死区（两种文字色都不合格的灰）·
 灰阶相邻两级是否 ≥10 L\* · 文字安全档是否真的对纸 ≥4.5:1 ·

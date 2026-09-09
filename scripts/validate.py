@@ -330,6 +330,15 @@ def check_docs(readme=None, root=None):
         if int(n) != real:
             fails.append(f"README.md 说 {fname} 是 {n} 行，实际 {real} 行")
 
+    # CI 徽标指向的 workflow 文件必须真的存在。徽标坏掉不会报错，
+    # 只会永远显示一张「workflow not found」的灰图——而所有人都只当它是
+    # 「还没跑完」，于是一块本该显示构建状态的地方长期在撒谎。
+    for wf in re.findall(r"github\.com/[\w.-]+/[\w.-]+/actions/workflows/([\w.-]+)/badge\.svg",
+                         readme):
+        if not os.path.exists(os.path.join(root, ".github", "workflows", wf)):
+            fails.append(f"README.md 的 CI 徽标指向 .github/workflows/{wf}，"
+                         f"但这个 workflow 不存在")
+
     # README 的图型表和 catalog 的声明张数必须对得上。两张表各写各的，
     # 加了图只改一处是迟早的事。
     cat = open(os.path.join(root, "catalog.md"), encoding="utf-8").read()

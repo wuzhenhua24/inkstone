@@ -327,6 +327,9 @@ DOC_CASES = [
     ("README 图型表少一行", lambda: check_docs(
         _rme.replace("| M2 | 散点带回归 | 两个连续变量是否共变 | 85mm 单栏 |\n", "")),
      "| M2 | 散点带回归 |" in _rme),
+    ("CI 徽标指向不存在的 workflow", lambda: check_docs(
+        _rme.replace("ci.yml/badge.svg", "build.yml/badge.svg")),
+     "ci.yml/badge.svg" in _rme),
 ]
 toothless = 0
 for label, run, anchored in DOC_CASES:
