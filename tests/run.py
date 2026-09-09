@@ -6,6 +6,7 @@
   2 校验      产物 / token / 目录 / README 全部合规
   3 反例      校验器仍然抓得住违规，条数不少于预期
   4 越界      每张有上限的图型都会拒绝超限数据
+  4.02 盲区   定点突变，每处都要被对应的那条规则点名
   4.05 界内   恰好取到声明的上限那一档，必须画得出来且合规
   4.06 数值   数值永不排成科学计数法（:,g 在 |v| ≥ 1e6 时会）
   4.1 负值    长度编码的图会拒绝负值，而不是画出零长条
@@ -170,6 +171,82 @@ except ValueError:
     pass
 if not blown:
     ok("R3 每点当量随量级无上限地走，显式传的装不下时当场拒绝")
+
+# 4.02 · 校验器盲区 ───────────────────────────────────────────
+# 定点突变：拿一份真实合规的产物，改坏一处，断言**对的那条规则**开口。
+#
+# 反例组（badcase）只数命中条数，数够就算过——一条规则被删掉，另一条
+# 恰好多吐一条，总数不变，它看不出来。这一组按关键词点名，规则和用例
+# 一一对应，删哪条就红哪条。
+#
+# 这些突变全部是「肉眼看不出、diff 看得见」的那种：px 换 pt 数字一模一样，
+# viewBox 翻倍后图还是那张图，只是落纸尺寸和每一条 pt 判定一起错位。
+group("校验器盲区")
+_good = open(os.path.join("out", "r1-rank-bars.svg"), encoding="utf-8").read()
+_dots = open(os.path.join("out", "r3-dot-cascade.svg"), encoding="utf-8").read()
+
+MUTATIONS = [
+    ("宽度单位换成 px", _good, lambda s: s.replace('width="240.945pt"', 'width="240.945px"'),
+     "不是 pt"),
+    ("高度单位换成 px", _good, lambda s: s.replace('height="198.0pt"', 'height="198.0px"'),
+     "不是 pt"),
+    ("viewBox 放大一倍", _good, lambda s: s.replace('viewBox="0 0 240.945 198.0"',
+                                                    'viewBox="0 0 481.89 396.0"'),
+     "对不上"),
+    ("条跑到纸外", _good, lambda s: s.replace('<rect x="6" y="50.0" width="203.625"',
+                                              '<rect x="6" y="50.0" width="403.625"'),
+     "越出版心"),
+    ("条被吞成负坐标", _good, lambda s: s.replace('<rect x="6" y="50.0"',
+                                                  '<rect x="-40" y="50.0"'),
+     "越出版心"),
+    ("图高长到纸外", _good, lambda s: s.replace('<line x1="6" y1="37.5" x2="6" y2="174.5"',
+                                                '<line x1="6" y1="37.5" x2="6" y2="974.5"'),
+     "越出版心"),
+    ("点缩到地板以下", _dots, lambda s: s.replace('r="1.6"', 'r="0.2"'),
+     "点半径"),
+    # 443mm——比 A4 还高 50%。校验器此前只读 width、从不读 height，
+    # 这张图零告警通过；宽度判得再严，高度不判就是只判了一半。
+    ("图比纸还高", _good, lambda s: s.replace(
+        'height="198.0pt"\n     viewBox="0 0 240.945 198.0"',
+        'height="1255.7pt"\n     viewBox="0 0 240.945 1255.7"'),
+     "图高"),
+    ("混进线性渐变", _good, lambda s: s.replace("<rect width=\"100%\"",
+                                                "<linearGradient id=\"g\"/><rect width=\"100%\""),
+     "linearGradient"),
+    ("填充指向渐变", _good, lambda s: s.replace('fill="#1F1F1F"/>', 'fill="url(#g)"/>', 1),
+     "url("),
+    ("用 alpha 表达密度", _good, lambda s: s.replace('<rect x="6" y="50.0"',
+                                                     '<rect fill-opacity="0.08" x="6" y="50.0"'),
+     "落不上纸"),
+    # stroke 通道：S1/S2/D1 的数据全编码在描边上，只收 fill 等于没判过它们
+    ("描边灰度过近", _good, lambda s: s.replace('stroke="#969696"', 'stroke="#8A8A8A"'),
+     "灰度过近"),
+    ("字号带单位（旧版会裸崩）", _good, lambda s: s.replace('font-size="10.5"', 'font-size="4pt"'),
+     "下限"),
+]
+_toothless = 0
+for _label, _base, _mut, _want in MUTATIONS:
+    _tmp = os.path.join("out", "_mut.svg")
+    _broken = _mut(_base)
+    if _broken == _base:
+        bad(f"突变锚点漂了，改不出违规：{_label}")
+        _toothless += 1
+        continue
+    with open(_tmp, "w", encoding="utf-8") as fh:
+        fh.write(_broken)
+    try:
+        _hits = check(_tmp)
+    except Exception as e:                # 校验器崩掉 = 这份产物根本没被检查
+        bad(f"「{_label}」让校验器抛了 {type(e).__name__}: {e}")
+        _toothless += 1
+        os.remove(_tmp)
+        continue
+    if not any(_want in m for m in _hits):
+        bad(f"「{_label}」没被对应规则抓住（期望命中含「{_want}」，实得 {_hits or '零条'}）")
+        _toothless += 1
+    os.remove(_tmp)
+if not _toothless:
+    ok(f"{len(MUTATIONS)} 处定点突变全部被对应的规则当场点名")
 
 # 4.05 · 界内正例 ─────────────────────────────────────────────
 # 只测「超限会被拒」是不够的。上限声明得再响，**恰好取到上限那一档**

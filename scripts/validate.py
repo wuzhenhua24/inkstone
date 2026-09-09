@@ -37,6 +37,54 @@ def contrast(a, b):
     return (hi + 0.05) / (lo + 0.05)
 
 
+def _f(el, attr, default=0.0):
+    """读一个可能带单位的数值属性。
+
+    `float(el.get("font-size"))` 碰上 `font-size="5pt"` 会裸崩，而校验器
+    崩掉等于这份产物**根本没被检查**——比报一条错危险得多：退出码非零，
+    看起来像「被拦下了」，实际上后面几十条规则一条都没跑。
+    """
+    v = el.get(attr)
+    if v is None:
+        return default
+    m = re.match(r"\s*(-?[\d.]+)", v)
+    return float(m.group(1)) if m else default
+
+
+def _box(el, tag):
+    """图元的包围盒 (x0, y0, x1, y1)；量不出来的返回 None。
+
+    百分比尺寸（纸底那块 `<rect width="100%">`）直接跳过——它按定义
+    就是整幅，判它没有意义。
+    """
+    def n(a):
+        v = el.get(a)
+        return None if v is None or v.strip().endswith("%") else _f(el, a)
+
+    if tag == "rect":
+        x, y, w_, h_ = n("x"), n("y"), n("width"), n("height")
+        if None in (x, y, w_, h_):
+            return None
+        return (x, y, x + w_, y + h_)
+    if tag == "circle":
+        cx, cy, r = n("cx"), n("cy"), n("r")
+        if None in (cx, cy, r):
+            return None
+        return (cx - r, cy - r, cx + r, cy + r)
+    if tag == "line":
+        v = [n("x1"), n("y1"), n("x2"), n("y2")]
+        if None in v:
+            return None
+        return (min(v[0], v[2]), min(v[1], v[3]), max(v[0], v[2]), max(v[1], v[3]))
+    if tag == "path":
+        v = [float(x) for x in re.findall(r"-?\d+\.?\d*", el.get("d", ""))]
+        if len(v) < 2:
+            return None
+        xs, ys = v[0::2], v[1::2]
+        return (min(xs), min(ys), max(xs), max(ys))
+    return None
+
+
 def check(path):
     src = open(path, encoding="utf-8").read()
     root = ET.fromstring(src)
@@ -52,15 +100,50 @@ def check(path):
         fails.append(f"根元素声明了不存在的色板 data-palette=\"{pname}\"")
         ramp = T.MONO
 
-    # 1 · 栏宽必须落在版心表里。图不能想多宽多宽，宽度由载体决定。
-    w = float(re.sub(r"[a-z]+$", "", root.get("width", "0")))
+    # 1 · 尺寸必须以 pt 为单位、宽度落在版心表里，且 viewBox 与之 1:1。
+    #
+    #     单位不能剥掉了事。上一版是 `re.sub(r"[a-z]+$", "", ...)`——
+    #     width="240.945px" 被剥成同一个数字，判定完全一样，而纸上的尺寸
+    #     差了 4.17 倍。这个项目的立身之本就是「SVG 用户单位即 pt，1:1 落纸」，
+    #     那这一条就得判在单位上，不是判在数字上。
+    #
+    #     viewBox 同理，而且更隐蔽：它一旦和 width/height 不等比，
+    #     **本文件里所有按 pt 算的几何判定就集体作废**——字号、线宽、
+    #     出血、包围盒，每一个 pt 落纸时都被悄悄缩放了一道。
+    def _dim(name):
+        raw = root.get(name, "")
+        m = re.fullmatch(r"\s*(-?[\d.]+)pt\s*", raw)
+        if m:
+            return float(m.group(1))
+        fails.append(f"根元素 {name}=\"{raw}\" 不是 pt——用户单位一换，"
+                     f"落纸尺寸和下面每一条 pt 判定就全错位了")
+        return _f(root, name)
+
+    w = _dim("width")
+    h = _dim("height")
     if not any(abs(w - v) < 0.5 for v in T.COLUMN.values()):
         fails.append(f"栏宽 {w:.1f}pt 不在版心表内（{ {k: round(v,1) for k,v in T.COLUMN.items()} }）")
+    #     高度也得判。图不能比它要落进去的那一页还高，而这一条此前完全
+    #     没有：443mm 的单栏图（比 A4 还高 50%）零告警通过。
+    col = next((k for k, v in T.COLUMN.items() if abs(w - v) < 0.5), None)
+    if col and h > T.PAGE_DEPTH[col] + 0.5:
+        fails.append(
+            f"图高 {h/T.MM:.0f}mm 超过 {col} 档的页面高度 "
+            f"{T.PAGE_DEPTH[col]/T.MM:.0f}mm——放不进去。三个诚实做法："
+            f"拆成两张 / 换更宽的栏（格子铺得开，高度就降下来）/ 减少类目。")
+
+    vb = [float(x) for x in re.findall(r"-?[\d.]+", root.get("viewBox", ""))]
+    if len(vb) != 4:
+        fails.append(f"根元素的 viewBox 不是四个数：{root.get('viewBox')!r}")
+    elif (abs(vb[0]) > 0.01 or abs(vb[1]) > 0.01
+          or abs(vb[2] - w) > 0.01 or abs(vb[3] - h) > 0.01):
+        fails.append(f"viewBox {vb} 与 width/height（{w:.3f}×{h:.3f}）对不上——"
+                     f"用户单位不再等于 pt，所有按 pt 判的几何都作废")
 
     # 2 · 字号下限：含 CJK 的文本按 7.5pt 判，纯拉丁按 6.0pt
     for el in root.iter(f"{NS}text"):
         s = "".join(el.itertext())
-        size = float(el.get("font-size", "0"))
+        size = _f(el, "font-size")
         floor = S.min_size_for(s)
         if size < floor - 0.01:
             kind = "CJK" if S.has_cjk(s) else "拉丁"
@@ -69,7 +152,7 @@ def check(path):
     # 3 · 文本不得出血。按实测宽度和 anchor 算真实包围盒。
     for el in root.iter(f"{NS}text"):
         s = "".join(el.itertext())
-        size, x = float(el.get("font-size", "0")), float(el.get("x", "0"))
+        size, x = _f(el, "font-size"), _f(el, "x")
         tw = S.text_width(s, size)
         anchor = el.get("text-anchor", "start")
         left = x - tw if anchor == "end" else (x - tw / 2 if anchor == "middle" else x)
@@ -84,7 +167,7 @@ def check(path):
             continue
         bx, by, bw, bh = (float(v) for v in box.split(","))
         st = "".join(el.itertext())
-        size, tx, ty = float(el.get("font-size", "0")), float(el.get("x", "0")), float(el.get("y", "0"))
+        size, tx, ty = _f(el, "font-size"), _f(el, "x"), _f(el, "y")
         tw = S.text_width(st, size)
         anchor = el.get("text-anchor", "start")
         left = tx - tw if anchor == "end" else (tx - tw / 2 if anchor == "middle" else tx)
@@ -98,7 +181,7 @@ def check(path):
     # 4 · 线宽地板：0.35pt 以下胶印和激光打印都会断线
     for el in root.iter():
         sw = el.get("stroke-width")
-        if sw and float(sw) < T.STROKE["hairline"] - 0.001:
+        if sw and _f(el, "stroke-width") < T.STROKE["hairline"] - 0.001:
             fails.append(f"线宽 {sw}pt < 印刷地板 {T.STROKE['hairline']}pt")
 
     # 5 · 文字对其真实底色的对比度。深色格里的数字坐在格子上而不是纸上，
@@ -115,23 +198,68 @@ def check(path):
     #     必须两两全比，不能只比在文档里前后相邻的两个：同样三个颜色，
     #     中间夹一个别的颜色，「相邻」就换了对象，结论跟着翻——那是运气不是判定。
     #     差 0 也要报：两个不同色值落在同一明度上，影印后就是同一个灰。
+    #     fill 和 stroke 都要收。S1 日序条码、S2 细线族、D1 阶梯直方的数据
+    #     **全部编码在 stroke 上**——只收 fill 的话，这三张图等于没进过这条
+    #     判定，而它们恰恰是最依赖「几条灰线分不分得开」的那几张。
     fills = []
     for el in root.iter():
-        f = el.get("fill")
-        if f and f.startswith("#") and f.upper() != "#FFFFFF" and el.tag != f"{NS}text":
-            if f.upper() not in fills:      # 按大写去重，免得 #1f1f1f 和 #1F1F1F 自己跟自己比
-                fills.append(f.upper())
+        if el.tag == f"{NS}text":
+            continue
+        for attr in ("fill", "stroke"):
+            f = el.get(attr)
+            if f and f.startswith("#") and f.upper() != "#FFFFFF":
+                if f.upper() not in fills:  # 按大写去重，免得 #1f1f1f 和 #1F1F1F 自己跟自己比
+                    fills.append(f.upper())
     for i in range(len(fills)):
         for j in range(i + 1, len(fills)):
             d = abs(lstar(fills[i]) - lstar(fills[j]))
             if d < 10:
                 fails.append(f"灰度过近：{fills[i]} vs {fills[j]}（差 {d:.1f} L* < 10）")
 
-    # 7 · 印刷产物里不该有的东西
-    if re.search(r"<image\b", src):
-        fails.append("含 <image> 光栅图——矢量产物里不允许，放大会糊")
-    if re.search(r"<animate|@keyframes|animation\s*:", src):
-        fails.append("含动画——印刷产物里没有动画这回事")
+    # 7 · 印刷产物里不该有的东西。
+    #     SKILL.md 第四节把「3D、阴影、渐变、发光」写进了拒绝清单，但清单
+    #     只拦得住照着做的人。这些东西在印刷上要么变成一片灰糊，要么逼出
+    #     一次额外套印，所以按标签名逐个点名——正则查 `<image\b` 那种写法
+    #     漏得太多：`<linearGradient>` 不叫 image 也不叫 animate。
+    BANNED_TAGS = {
+        "image": "光栅图——矢量产物里放大会糊",
+        "linearGradient": "线性渐变——印刷上是网点渐变，缩印后成一片灰",
+        "radialGradient": "径向渐变——同上，且更容易露出色阶断层",
+        "filter": "滤镜——RIP 不保证支持，落纸结果不可预期",
+        "feGaussianBlur": "高斯模糊——印刷没有「模糊」这个墨",
+        "feDropShadow": "投影——SKILL.md 第四节明确拒绝",
+        "pattern": "图案填充——缩印后必然摩尔纹",
+        "mask": "蒙版——展平后常出白边",
+        "animate": "动画——印刷产物里没有动画这回事",
+        "animateTransform": "动画——同上",
+        "animateMotion": "动画——同上",
+        "set": "动画——同上",
+    }
+    for el in root.iter():
+        tag = el.tag.replace(NS, "")
+        if tag in BANNED_TAGS:
+            fails.append(f"含 <{tag}>：{BANNED_TAGS[tag]}")
+            break
+    if re.search(r"@keyframes|animation\s*:", src):
+        fails.append("样式里含动画——印刷产物里没有动画这回事")
+    # 渐变/滤镜也可以只从属性侧混进来（fill="url(#g)"），标签判不到。
+    for el in root.iter():
+        for attr in ("fill", "stroke"):
+            v = el.get(attr, "")
+            if v.startswith("url("):
+                fails.append(f"{attr}=\"{v}\" 指向了渐变或图案——印刷只接受实色")
+                break
+        if el.get("filter") or el.get("mix-blend-mode"):
+            fails.append("用了 filter / mix-blend-mode——落纸结果由 RIP 决定，不可控")
+            break
+    # 低透明度：印刷上 alpha 要靠网点模拟，15% 以下基本等于没印。
+    # 用 alpha 表达密度是屏幕的做法，纸上应当改半径或改空心点。
+    for el in root.iter():
+        for attr in ("opacity", "fill-opacity", "stroke-opacity"):
+            v = el.get(attr)
+            if v is not None and _f(el, attr, 1.0) < 0.15:
+                fails.append(f"{attr}={v} < 0.15——这么淡的网点胶印基本落不上纸")
+                break
 
     # 9 · 坐在纸上的文字只许用文字安全档（GRAY[0..3]）。
     #     坐在深色格上的文字走第 5 条的对比度判定，不受这条约束。
@@ -153,8 +281,8 @@ def check(path):
     lines = []
     for el in root.iter(f"{NS}text"):
         st = "".join(el.itertext())
-        size = float(el.get("font-size", "0"))
-        tx, ty = float(el.get("x", "0")), float(el.get("y", "0"))
+        size = _f(el, "font-size")
+        tx, ty = _f(el, "x"), _f(el, "y")
         tw = S.text_width(st, size)
         anchor_ = el.get("text-anchor", "start")
         left = tx - tw if anchor_ == "end" else (tx - tw / 2 if anchor_ == "middle" else tx)
@@ -196,6 +324,41 @@ def check(path):
         if m:
             fails.append(f"数值排成了科学计数法：「{s}」——印刷图里没人读 e+06，"
                          f"用 charts._data.num()")
+            break
+
+    # 13 · 几何必须落在版心里，点不得小于印刷地板。
+    #
+    #      这是校验器此前最大的一块盲区：**除了一条全局线宽地板，
+    #      非文字图元的几何一条都没判过。** 于是 `<rect width="0">`
+    #      （数值被吞成零长条）、跑到纸外的条、比纸还高的图，全部零告警
+    #      通过——文字那边有出血、压字、对比度、底色四道判定，
+    #      图形这边一道也没有，而图形才是这张图的主体。
+    #
+    #      判到 ±0.5pt 的容差：描边跨在路径两侧，半个线宽的溢出是正常的。
+    over = []
+    for el in root.iter():
+        tag = el.tag.replace(NS, "")
+        if tag == "text":
+            continue                    # 文字有第 3 条按实测宽度专判
+        box = _box(el, tag)
+        if box is None:
+            continue
+        x0, y0, x1, y1 = box
+        d = max(-x0, -y0, x1 - w, y1 - h)
+        if d > 0.5:
+            over.append(f"<{tag}> 越出版心 {d:.1f}pt"
+                        f"（{x0:.1f},{y0:.1f}→{x1:.1f},{y1:.1f} 不在 {w:.1f}×{h:.1f} 内）")
+    for m in over[:3]:
+        fails.append(m)
+    if len(over) > 3:
+        fails.append(f"……几何越界共 {len(over)} 处（只列前 3 处）")
+
+    # 实心点小于 DOT.min_r 时激光打印会丢、胶印会虚。这个 token 此前
+    # 在校验器里一次都没被引用过——没有调用点的地板不是地板。
+    for el in root.iter(f"{NS}circle"):
+        r = _f(el, "r")
+        if r < T.DOT["min_r"] - 1e-9:
+            fails.append(f"点半径 {r}pt < 印刷地板 {T.DOT['min_r']}pt——胶印会虚、激光会丢")
             break
 
     # 8 · 字体栈必须中西分家（拉丁在前、CJK 在后，靠逐字符 fallback）

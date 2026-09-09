@@ -40,7 +40,12 @@ def hundred_grid(data, title=None, subtitle=None, source=None,
     # 方阵只占版心的一部分，图例放右侧。
     # 满宽方阵会得到 6.6mm 的大格子——印出来是一堵墨墙，费墨且粗糙。
     rows = -(-100 // cols)
-    slot = inner * grid_frac / cols
+    # 格子随栏宽线性长，所以 grid_frac 这个系数在窄栏够用、在宽栏不够：
+    # 254mm 的幻灯片档上格子会长到 11mm 见方，正是上面那句「墨墙」说的东西，
+    # 整图也因此高到 157mm，塞不进一张 16:9 的幻灯片。
+    # 格子尺寸是印刷手感，不是版心的函数——同一张百格方阵在期刊上和在
+    # 幻灯片上应该长得一样大，宽栏多出来的地方留白，不用来把格子吹大。
+    slot = min(inner * grid_frac / cols, T.GRID_CELL_MAX / 0.80)
     cell = slot * 0.80
     grid_w = cols * slot - (slot - cell)
     grid_h = rows * slot - (slot - cell)
@@ -77,17 +82,25 @@ def hundred_grid(data, title=None, subtitle=None, source=None,
 
     # 图例：一类一行，竖排。中文类目名不能缩写，横排图例在 85mm 里必然折行。
     decimals = decimals_for(pct)
-    lg_avail = x1 - lg_x
+    sw = T.SIZE["label"] * 0.8
+    vals = [f"{p:.{decimals}f}%" for p in pct]
+    # 图例块的宽度由内容决定，不由版心决定。把百分比右对齐到版心右缘，
+    # 窄栏上正好，宽栏上就会在类目名和数字之间裂开一大片空白——格子封顶
+    # 之后 slide 档实测裂了 130mm，读者的视线要横跨半张幻灯片才能把
+    # 「类目3」和「15.2%」对上。校验器判不出这个：没越界、没压字。
+    lg_right = min(x1, lg_x + sw + 3.5
+                   + S.widest([n for n, _ in data], T.SIZE["label"])
+                   + 8 + S.widest(vals, T.SIZE["value"]))
+    lg_avail = lg_right - lg_x
     for row, idx in enumerate(order):
         y = top + T.SIZE["label"] + row * lg_line
-        sw = T.SIZE["label"] * 0.8
         parts.append(S.rect(lg_x, y - sw + 0.5, sw, sw, ink_of[idx]))
-        val = f"{pct[idx]:.{decimals}f}%"
+        val = vals[idx]
         vw = S.text_width(val, T.SIZE["value"])
         parts.append(S.text(lg_x + sw + 3.5, y,
                             S.ellipsize(data[idx][0], lg_avail - sw - vw - 8, T.SIZE["label"]),
                             T.SIZE["label"], T.GRAY[1]))
-        parts.append(S.text(x1, y, val, T.SIZE["value"], T.GRAY[0],
+        parts.append(S.text(lg_right, y, val, T.SIZE["value"], T.GRAY[0],
                             T.WEIGHT["value"], anchor="end"))
 
     return S.canvas(W, H, "\n".join(parts), title, subtitle, source)
