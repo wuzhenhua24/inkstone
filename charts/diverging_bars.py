@@ -9,6 +9,9 @@ from charts._data import require
 from charts._data import decimals_for, fmt
 
 
+MAX_CATS = 10
+
+
 # ════ R2 分岔条 ════
 # 数据形状：类目 → 可正可负的数值（增减、盈亏、净流入）
 # 版心：single / a4body
@@ -19,6 +22,10 @@ def diverging_bars(data, title=None, subtitle=None, source=None,
     if sort:
         data = sorted(data, key=lambda kv: -kv[1])
     require(data, "R2 分岔条")
+    if len(data) > MAX_CATS:
+        raise ValueError(
+            f"R2 分岔条最多 {MAX_CATS} 项，收到 {len(data)} 项。"
+            f"零点两侧都要留出条长和数值，再多每项只剩几毫米——改用 R1 或拆图。")
 
     W = T.COLUMN[column]
     x0, x1 = T.PAD["left"], W - T.PAD["right"]

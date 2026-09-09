@@ -47,7 +47,7 @@ def stacked_bands(layers, x_labels, title=None, subtitle=None, source=None,
     px0 = x0 + max(S.text_width(f"{t:,g}", T.SIZE["label"]) for t in ticks) + 4
     px1 = x1 - lab_w - 7        # 薄带的名字要退到右侧，先把位置留出来
 
-    plot_h = 116.0
+    plot_h = T.plot_height(px1 - px0, "band")
     top = S.head_height(title, subtitle, W)
     base = top + plot_h
 

@@ -9,6 +9,9 @@ from charts import _svg as S
 from charts._data import median, require, require_nonneg
 
 
+MAX_DAYS = 150
+
+
 # ════ S1 日序条码 ════
 # 数据形状：每天一个读数，60–120 天。保留每一天，不做周聚合。
 # 版心：double（170mm）——90 天在单栏里每天只剩 2.5pt，条会糊成一片
@@ -18,6 +21,11 @@ def day_series(data, title=None, subtitle=None, source=None,
                annotate_ratio=1.25):
     """data: [(datetime.date, 数值), ...] 按时间升序。"""
     require(data, "S1 日序条码", "序列")
+    if len(data) > MAX_DAYS:
+        raise ValueError(
+            f"S1 日序条码最多 {MAX_DAYS} 天，收到 {len(data)} 天。"
+            f"再多每天不足 0.35pt 的印刷地板，条会糊成一片实心带——"
+            f"先做周聚合再画。")
     require_nonneg([(str(d), v) for d, v in data], "S1 日序条码")
 
     W = T.COLUMN[column]
@@ -25,22 +33,24 @@ def day_series(data, title=None, subtitle=None, source=None,
     inner = x1 - x0
     n = len(data)
 
+    vmax = max(v for _, v in data) or 1
+
+    # 中位数标签要占掉右侧一条装订线，条必须止步于此——
+    # 否则标签压在数据上。屏幕图可以靠 tooltip 躲，印刷没有这条退路。
+    # 这一段必须排在算高度之前：图形区高度由图形区宽度定，而图形区
+    # 右界正是被这条装订线切出来的。
+    med = median([v for _, v in data]) if show_median else None
+    med_lab = f"中位数 {med:,g}{unit}" if show_median else ""
+    gutter = (S.text_width(med_lab, T.SIZE["label"]) + 6) if show_median else 0
+    px1 = x1 - gutter                       # 图形区右界
+
     annot_h = T.SIZE["value"] + 5      # 峰值标注带
-    plot_h = 62.0
+    plot_h = T.plot_height(px1 - x0, "barcode")
     axis_h = T.SIZE["label"] + 6
 
     top = S.head_height(title, subtitle, W)
     base_y = top + annot_h + plot_h    # 基线
     H = base_y + axis_h + T.GAP["plot_source"] + T.SIZE["source"] + 4
-
-    vmax = max(v for _, v in data) or 1
-
-    # 中位数标签要占掉右侧一条装订线，条必须止步于此——
-    # 否则标签压在数据上。屏幕图可以靠 tooltip 躲，印刷没有这条退路。
-    med = median([v for _, v in data]) if show_median else None
-    med_lab = f"中位数 {med:,g}{unit}" if show_median else ""
-    gutter = (S.text_width(med_lab, T.SIZE["label"]) + 6) if show_median else 0
-    px1 = x1 - gutter                       # 图形区右界
 
     slot = (px1 - x0) / n
     bar_w = max(T.STROKE["hairline"], min(3.2, slot * 0.68))

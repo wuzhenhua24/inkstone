@@ -10,6 +10,7 @@
   4.2 退化    空数据一律友好拒绝；全等值样本仍要画得出来
   4.3 留位    标签抽稀按实测宽度，退回字符数估宽必须被抓住
   4.4 色板    切色板后原语默认参数必须跟着走，不许漏出 mono 灰
+  4.5 版心    13 张 × 5 档栏宽全部渲染并合规；图形区高度随栏宽增长
   5 确定性    跑两次字节相同（演示数据不许用随机数）
   5.5 导出    PDF / PNG 真的产出且不是空白页
   6 目录闭环  catalog 里每个编号都有渲染产物
@@ -99,6 +100,10 @@ from charts.tick_box import tick_box
 from charts.line_family import line_family
 from charts.small_multiples import small_multiples
 from charts.stacked_bands import stacked_bands
+from charts.rank_bars import rank_bars
+from charts.diverging_bars import diverging_bars
+from charts.day_series import day_series
+from datetime import date, timedelta
 
 GUARDS = [
     ("C1 类目超限", hundred_grid, ([(f"类{i}", 10) for i in range(8)],)),
@@ -110,6 +115,12 @@ GUARDS = [
     ("S2 线数超限", line_family, ([(f"线{i}", [1, 2]) for i in range(8)], ["a", "b"])),
     ("S3 格数超限", small_multiples, ([(f"格{i}", [1, 2]) for i in range(14)], ["a", "b"])),
     ("C2 层数超限", stacked_bands, ([(f"层{i}", [1, 2]) for i in range(7)], ["a", "b"])),
+    # 以下四道 catalog 早就声明了，但一直没有代码兜住
+    ("R1 窄栏类目超限", rank_bars, ([(f"类{i}", 10) for i in range(9)],)),
+    ("R2 类目超限", diverging_bars, ([(f"类{i}", 10) for i in range(11)],)),
+    ("S1 天数超限", day_series, ([(date(2026, 1, 1) + timedelta(days=i), 10)
+                                  for i in range(151)],)),
+    ("D2 点数超限", beeswarm, ([("甲", [1] * 181)],)),
 ]
 leaked = 0
 for label, fn, args in GUARDS:
@@ -127,13 +138,9 @@ if not leaked:
 # 条被 max(w,0) 吞成零长、跟在条端的数值跑到纸外、百格方阵分出 165 格。
 # 画一张撒谎的图比报错糟得多，所以这些必须当场拒绝。
 group("负值防护")
-from charts.rank_bars import rank_bars
-from charts.diverging_bars import diverging_bars
 from charts.dot_cascade import dot_cascade
-from charts.day_series import day_series
 from charts.scatter_fit import scatter_fit
 from charts.step_histogram import step_histogram
-from datetime import date, timedelta
 
 _d0 = date(2026, 4, 1)
 NEG = [
@@ -257,6 +264,62 @@ for m in stale:
     bad(m)
 if not stale:
     ok(f"{len(_pal.PRESETS) - 1} 套色板 × 5 个原语，默认参数全部跟着色板走")
+
+# 4.5 · 版心覆盖 ───────────────────────────────────────────────
+# demo 只跑 single 和 double，COLUMN 却有五档——onehalf / a4body / slide
+# 长期处于「从没渲染过」的状态。第一次把 13 × 5 跑全，就抓到了 D1 最后一个
+# 箱边标签出血（demo 的标签是整数「70」，窄得刚好塞得进右边距，一直没露）。
+group("版心覆盖")
+import tests.fixtures as fx
+
+miss = 0
+for code, draw in fx.ALL:
+    for col in T.COLUMN:
+        tmp = os.path.join("out", "_cov.svg")
+        try:
+            with open(tmp, "w", encoding="utf-8") as fh:
+                fh.write(draw(col))
+        except Exception as e:
+            bad(f"{code}/{col} 画不出来：{type(e).__name__}: {e}")
+            miss += 1
+            continue
+        for m in check(tmp):
+            bad(f"{code}/{col}: {m}")
+            miss += 1
+        os.remove(tmp)
+if not miss:
+    ok(f"{len(fx.ALL)} 张 × {len(T.COLUMN)} 档 = {len(fx.ALL) * len(T.COLUMN)} 种组合全部合规")
+
+# 图形区高度必须随栏宽长。写成硬编码常数时，slide 栏（254mm）拿到的高度
+# 和 single 栏（85mm）一模一样，整图被压成 0.25 的扁带。
+thin = []
+for code, draw in fx.ALL:
+    if code not in fx.RESPONSIVE:
+        continue
+    hs = {}
+    for col in ("single", "slide"):
+        m = re.search(r'height="([\d.]+)pt"', draw(col))
+        hs[col] = float(m.group(1))
+    if hs["slide"] < hs["single"] * 1.3:
+        thin.append(f"{code} 在 slide 栏只有 {hs['slide']:.0f}pt 高，"
+                    f"single 栏是 {hs['single']:.0f}pt——图形区高度没跟着栏宽长")
+for m in thin:
+    bad(m)
+if not thin:
+    ok(f"{len(fx.RESPONSIVE)} 张按宽度推导高度的图，slide 档均比 single 档高 ≥30%")
+
+# 4.6 · 目录声明一致性 ─────────────────────────────────────────
+# 「类目上限」列里写了数字就必须标「代码强制」并真的拦住。这条规则本身
+# 也要有反例——否则它跟着 catalog 一起漂掉都没人知道。
+group("目录声明一致性")
+_cat_src = open("catalog.md", encoding="utf-8").read()
+_doctored = _cat_src.replace("≤10（代码强制）", "≤10")
+if _doctored == _cat_src:
+    bad("反例没生效：catalog.md 里找不到 R2 的「≤10（代码强制）」，锚点漂了")
+elif not check_catalog(_doctored):
+    bad("抹掉 R2 的「代码强制」竟然没被抓住——目录声明一致性规则失效了")
+else:
+    ok("抹掉一处「代码强制」会被当场抓住")
 
 # 5 · 确定性 ───────────────────────────────────────────────────
 group("确定性")

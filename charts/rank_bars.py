@@ -11,10 +11,24 @@ from charts._data import require, require_nonneg
 # 数据形状：类目 → 单一数值，需要读出高低次序
 # 版心：single / a4body（窄栏尤其合适——标签在上，不吃图形宽度）
 # 失效：>10 项改用 R3 点阵瀑布；有正负改用 R2 分岔条
+# 类目上限随栏宽变：窄栏里每行是「标签在上、条在下」两行高，8 项就顶到
+# 一页图该有的高度了；宽栏才放得下 12 项。catalog 声明了这两个数，
+# 声明了就必须由代码兜住——写在文档里等人记得，就是迟早会漂的那种约定。
+MAX_CATS_NARROW = 8
+MAX_CATS_WIDE = 12
+
+
 def rank_bars(data, title=None, subtitle=None, source=None,
               column="single", unit="", show_value=True):
     """data: [(类目, 数值), ...]，按传入顺序绘制（调用方负责排序）。"""
     require(data, "R1 定序条")
+    narrow = T.COLUMN[column] <= T.COLUMN["onehalf"]
+    cap = MAX_CATS_NARROW if narrow else MAX_CATS_WIDE
+    if len(data) > cap:
+        raise ValueError(
+            f"R1 定序条在{'窄栏' if narrow else '宽栏'}（{column}）最多 {cap} 项，"
+            f"收到 {len(data)} 项。中文类目名不能缩写，再多要么压字要么把图拉成"
+            f"跨页的长条——换宽栏，或改用 R3 点阵瀑布。")
     require_nonneg(data, "R1 定序条")
 
     W = T.COLUMN[column]

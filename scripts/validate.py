@@ -175,6 +175,16 @@ def check(path):
     if hits > 3:
         fails.append(f"……同基线压字共 {hits} 处（只列前 3 处）")
 
+    # 11 · 四件套齐全。SKILL.md 第三节写的是「缺一返工」，那就得能判。
+    #      靠字号反推是不行的：来源行和轴标签同为 7.5pt，副题和别的 9pt 文本
+    #      也分不开。所以 canvas() 给三个槽位打 data-slot，这里据此点名。
+    slots = {el.get("data-slot") for el in root.iter(f"{NS}text")}
+    NAMES = {"title": "图题（一句结论）", "subtitle": "副题（口径 · 单位 · 时间范围）",
+             "source": "来源行（数据来源 · 样本量）"}
+    for key, cn in NAMES.items():
+        if key not in slots:
+            fails.append(f"四件套缺「{cn}」——读者不看代码，只看这几行")
+
     # 8 · 字体栈必须中西分家（拉丁在前、CJK 在后，靠逐字符 fallback）
     for el in root.iter(f"{NS}text"):
         fam = el.get("font-family", "")
@@ -209,17 +219,39 @@ def check_tokens():
         if contrast(c, T.PAPER) < 4.5:
             fails.append(f"GRAY[{i}]={c} 号称文字安全档，但对纸只有 "
                          f"{contrast(c, T.PAPER):.2f}:1")
+
+    # PLOT_ASPECT 里不许留没人用的档。前一版的 RATIO 就是这么死的：
+    # 声明了四档高宽比，全项目零引用，于是宽栏图被压成扁带也没人拦。
+    # token 一旦没有调用点，就不再受任何测试保护，只会慢慢和现实脱节。
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    used = set()
+    chart_dir = os.path.join(root, "charts")
+    for fn in sorted(os.listdir(chart_dir)):
+        if fn.endswith(".py"):
+            body = open(os.path.join(chart_dir, fn), encoding="utf-8").read()
+            used |= set(re.findall(r'plot_height\([^)]*?["\'](\w+)["\']\s*\)', body))
+    for kind in T.PLOT_ASPECT:
+        if kind not in used:
+            fails.append(f"PLOT_ASPECT['{kind}'] 没有任何图型在用——"
+                         f"没有调用点的 token 不受测试保护，删掉或接上")
+    for kind in used - set(T.PLOT_ASPECT):
+        fails.append(f"有图型调用了 plot_height(..., '{kind}')，但 PLOT_ASPECT 里没有这一档")
+    if T.PLOT_H["min"] >= T.PLOT_H["max"]:
+        fails.append(f"PLOT_H 上下限反了：min={T.PLOT_H['min']} ≥ max={T.PLOT_H['max']}")
     return fails
 
 
-def check_catalog():
+def check_catalog(src=None):
     """目录声明的张数必须等于实际有实现的行数。
 
     这类数字漂移是文档腐坏最常见的入口——声明写在标题里，实现散在表格里，
     改了一处忘了另一处。能机器判就别指望人记得。
+
+    src 可注入 catalog.md 的正文，供反例测试喂一份故意写坏的目录。
     """
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    src = open(os.path.join(root, "catalog.md"), encoding="utf-8").read()
+    if src is None:
+        src = open(os.path.join(root, "catalog.md"), encoding="utf-8").read()
     declared = re.search(r"^#[^\n]*·\s*(\d+)\s*张", src, re.M)
     rows = re.findall(r"^\|\s*([RSCDM]\d+)\s*\|.*\|\s*`([^`]+)`\s*\|\s*$", src, re.M)
     fails = []
@@ -234,6 +266,23 @@ def check_catalog():
             body = open(os.path.join(root, impl), encoding="utf-8").read()
             if f"# ════ {num} " not in body:
                 fails.append(f"{impl} 缺少 `# ════ {num} 图名 ════` 标记块")
+
+    # 「类目上限」列里写了数字，就必须标「代码强制」。
+    # 一张表里七条标了「代码强制」、两条没标，读者根本分不清哪条会真拦——
+    # 而没被代码兜住的那两条，迟早会有人越过去。声明和实现的漂移
+    # 正是这类文档最先烂掉的地方，所以让它机器判。
+    for line in src.splitlines():
+        if not re.match(r"^\|\s*[RSCDM]\d+\s*\|", line):
+            continue
+        cells = [c.strip() for c in line.split("|")]
+        if len(cells) < 8:
+            fails.append(f"catalog.md 行列数不对，无法核对上限：{line[:40]}")
+            continue
+        num, cap = cells[1], cells[5]
+        if re.search(r"\d", cap) and "代码强制" not in cap:
+            fails.append(
+                f"catalog.md {num} 的类目上限「{cap}」写了数字却没标「代码强制」——"
+                f"要么在实现里真的拦住并标注，要么把这个数从表里拿掉")
     return fails
 
 

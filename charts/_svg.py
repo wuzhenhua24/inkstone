@@ -129,9 +129,11 @@ def wrap(s, max_w, size_pt, sep=" · "):
 
 def text(x, y, s, size=T.SIZE["label"], fill=None, weight=None,
          anchor="start", family=None, spacing=None, baseline=None,
-         on=None, on_box=None):
+         on=None, on_box=None, slot=None):
     """on: 这段文字坐在什么底色上（深色格里的数字要翻成纸白）。
     on_box: 那块底色的矩形 (x, y, w, h)。
+    slot: 四件套里的哪个槽位（title / subtitle / source）。校验器据此确认
+    四件套齐全——靠字号反推是不行的，来源行和轴标签都是 7.5pt。
 
     不传 on 就是坐在纸上。校验器读 data-on 算对比度，读 data-on-box
     确认底色真的盖住了整段文字——白字有一半飘到白纸上，在灰度审阅时
@@ -147,6 +149,7 @@ def text(x, y, s, size=T.SIZE["label"], fill=None, weight=None,
     if on:       a.append(f'data-on="{on}"')
     if on_box:
         a.append('data-on-box="%s"' % ",".join(str(T.px(v)) for v in on_box))
+    if slot:     a.append(f'data-slot="{slot}"')
     if baseline: a.append(f'dominant-baseline="{baseline}"')
     a.append('font-variant-numeric="tabular-nums"')
     return f'<text {" ".join(a)}>{escape(str(s))}</text>'
@@ -192,12 +195,13 @@ def canvas(width_pt, height_pt, body, title=None, subtitle=None, source=None):
     if title:
         for ln in wrap(title, avail, T.SIZE["title"]):
             head.append(text(T.PAD["left"], y, ln, T.SIZE["title"],
-                             T.INK, T.WEIGHT["title"]))
+                             T.INK, T.WEIGHT["title"], slot="title"))
             y += T.SIZE["title"] * 1.32
         y += T.GAP["title_sub"] - T.SIZE["title"] * 1.32 + T.SIZE["subtitle"]
     if subtitle:
         for ln in wrap(subtitle, avail, T.SIZE["subtitle"]):
-            head.append(text(T.PAD["left"], y, ln, T.SIZE["subtitle"], T.MUTED))
+            head.append(text(T.PAD["left"], y, ln, T.SIZE["subtitle"], T.MUTED,
+                             slot="subtitle"))
             y += T.SIZE["subtitle"] * 1.35
 
     # 来源行同样会超长（图型会往里追加口径、n、r、标度注记）。
@@ -211,7 +215,8 @@ def canvas(width_pt, height_pt, body, title=None, subtitle=None, source=None):
         fy = height_pt - 4 - lh * (len(lines) - 1)
         for ln in lines:
             foot.append(text(T.PAD["left"], fy, ln, T.SIZE["source"],
-                             T.SRC, T.WEIGHT["source"], spacing="0.06em"))
+                             T.SRC, T.WEIGHT["source"], spacing="0.06em",
+                             slot="source"))
             fy += lh
 
     return f'''<svg xmlns="http://www.w3.org/2000/svg" version="1.1"

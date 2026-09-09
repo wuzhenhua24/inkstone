@@ -72,7 +72,7 @@ def line_family(series, x_labels, title=None, subtitle=None, source=None,
     # 两者混为一谈，标签就会从纸外开始画。
     px0 = x0 + max(S.text_width(f"{t:,g}", T.SIZE["label"]) for t in ticks) + 4
 
-    plot_h = 108.0
+    plot_h = T.plot_height(px1 - px0, "series")
     axis_h = T.SIZE["label"] + 8
     top = S.head_height(title, subtitle, W)
     base = top + plot_h

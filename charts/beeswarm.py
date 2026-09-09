@@ -8,6 +8,7 @@ from charts import _svg as S
 from charts._data import median, nice_ticks, require
 
 MAX_GROUPS = 6
+MAX_POINTS = 180
 
 
 def _pack(xs, r, gap):
@@ -50,6 +51,12 @@ def beeswarm(groups, title=None, subtitle=None, source=None,
             f"再多每组只剩几毫米高，点会糊成一条线——拆成多张图。")
 
     require(groups, "D2 蜂群", "组")
+    n_pts = sum(len(vs) for _, vs in groups)
+    if n_pts > MAX_POINTS:
+        raise ValueError(
+            f"D2 蜂群最多 {MAX_POINTS} 点，收到 {n_pts} 点。"
+            f"再多点会堆成密不透风的块，逐条记录这件事本身就没了意义——"
+            f"改用 D1 阶梯直方。")
     for nm, vs in groups:
         require(vs, "D2 蜂群", f"「{nm}」组的读数")
 

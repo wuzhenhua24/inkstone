@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tokens as T
 from charts import _svg as S
 
-EXPECT = 10
+EXPECT = 11
 
 
 def build():
@@ -47,6 +47,9 @@ def build():
         f'<text x="6" y="178" font-size="7.5" fill="{T.GRAY[0]}" font-family="{T.FONT_SANS}">环比增速</text>',
         f'<text x="20" y="178" font-size="7.5" fill="{T.GRAY[0]}" font-family="{T.FONT_SANS}">同比增速</text>',
     ])
+    # 11 四件套缺来源行：canvas 的第四个参数留空。图题和副题都在，
+    #    唯独没有来源行——读者无从判断这些数字是哪来的、样本多大。
+    #    SKILL.md 第三节写的是「缺一返工」，那就必须能判，不能只写在文档里。
     return S.canvas(T.COLUMN["single"], 196, body, "反例", "故意违规")
 
 

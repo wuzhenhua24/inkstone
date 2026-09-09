@@ -24,7 +24,7 @@ def step_histogram(values, title=None, subtitle=None, source=None,
     ymax = yt[-1]
 
     px0 = x0 + max(S.text_width(f"{t:,g}", T.SIZE["label"]) for t in yt) + 4
-    plot_h = 74.0
+    plot_h = T.plot_height(x1 - px0, "dist")
     top = S.head_height(title, subtitle, W)
     base = top + plot_h
     bw = (x1 - px0) / len(counts)
@@ -63,8 +63,12 @@ def step_histogram(values, title=None, subtitle=None, source=None,
     for k, e in enumerate(edges):
         if k % step:
             continue
+        # 首尾两个箱边正好坐在图形区左右界上，居中锚点会让半个标签挂到版心外。
+        # 整数标签窄，挂出去的那点还在页内；一旦带上小数（「50.0」比「50」宽
+        # 6.5pt）就直接出血。首尾改用 start / end，让标签往版心里侧倒。
+        anchor = "start" if k == 0 else ("end" if k == len(edges) - 1 else "middle")
         parts.append(S.text(px0 + k * bw, base + 3 + T.SIZE["label"], fmt(e, dec),
-                            T.SIZE["label"], T.GRAY[3], anchor="middle"))
+                            T.SIZE["label"], T.GRAY[3], anchor=anchor))
 
     note = (f"n={len(values)} · 箱宽 {fmt(edges[1] - edges[0], dec)}{unit} · "
             f"{len(counts)} 箱")

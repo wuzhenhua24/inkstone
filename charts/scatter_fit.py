@@ -25,7 +25,7 @@ def scatter_fit(points, title=None, subtitle=None, source=None,
     xt = nice_ticks(min(xs), max(xs), 5)
     yt = nice_ticks(min(ys), max(ys), 4)
     px0 = x0 + max(S.text_width(f"{t:,g}", T.SIZE["label"]) for t in yt) + 4
-    plot_h = 96.0
+    plot_h = T.plot_height(x1 - px0, "cloud")
     top = S.head_height(title, subtitle, W)
     base = top + plot_h
 
