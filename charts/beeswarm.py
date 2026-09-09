@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 """D2 蜂群 · 逐条记录的堆积分布（40–180 点，≤6 组）"""
-import sys, os
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tokens as T
 from charts import _svg as S
 from charts._data import median, nice_ticks, require
@@ -16,12 +13,19 @@ def _pack(xs, r, gap):
 
     按 x 升序处理，碰撞只需回看 x 距离在 2r+gap 以内的点——
     这让复杂度从 O(n²) 降到接近 O(n·k)，180 点以内瞬时完成。
+
+    窗口用一个左指针推进，不是每个点都把 placed 全扫一遍：placed 是按
+    x 升序追加的，所以「x 距离在 d 以内」的那些点必然是尾部一段连续切片。
+    全扫一遍写起来更短，但那样复杂度还是 O(n²)，上面这句话就成了空话。
     """
     d = 2 * r + gap
     placed = []
     out = []
+    lo = 0
     for x in sorted(xs):
-        near = [p for p in placed if abs(p[0] - x) < d]
+        while lo < len(placed) and x - placed[lo][0] >= d:
+            lo += 1
+        near = placed[lo:]
         y, k = 0.0, 0
         while True:
             for cand in ((0.0,) if k == 0 else (k * r, -k * r)):

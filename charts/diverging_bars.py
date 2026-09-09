@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 """R2 分岔条 · 带正负的分类数值（≤10 项）"""
-import sys, os
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tokens as T
 from charts import _svg as S
 from charts._data import require

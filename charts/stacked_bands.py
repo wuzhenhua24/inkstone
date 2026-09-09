@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 """C2 堆叠带 · 构成随时间变化（≤5 层）"""
-import sys, os
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tokens as T
 from charts import _svg as S
 from charts._data import nice_ticks, decimals_for, fmt, require, require_nonneg
@@ -71,7 +68,7 @@ def stacked_bands(layers, x_labels, title=None, subtitle=None, source=None,
         top_pts = [f"{T.px(sx(i))} {T.px(sy(upper[i]))}" for i in range(n)]
         bot_pts = [f"{T.px(sx(i))} {T.px(sy(lower[i]))}" for i in range(n - 1, -1, -1)]
         d = "M" + " L".join(top_pts + bot_pts) + " Z"
-        parts.append(f'<path d="{d}" fill="{T.BAND[li]}"/>')
+        parts.append(S.area(d, T.BAND[li]))
         bands.append((name, list(lower), upper))
         lower = upper
 

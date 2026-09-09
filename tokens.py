@@ -78,9 +78,12 @@ WEIGHT = {"title": 600, "value": 600, "label": 400, "source": 500}
 # 没有汉字。SVG 的 font-family 是逐字符 fallback 的，所以
 # 把拉丁字体放前面、中文字体放后面，就能自动中西分家。
 # ─────────────────────────────────────────────────────────────
+# 数字也走这一栈，靠 tabular-nums 对齐；不另设 FONT_NUM 别名——
+# 一个恒等于 FONT_SANS 又没有调用点的名字，只会让人以为存在两套数字策略。
 FONT_SANS = "'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif"
+# 衬线栈：期刊正文用宋体时，图内也要跟着换。调用点是 text(family=T.FONT_SERIF)，
+# 图型默认不用它——所以它不像 PLOT_ASPECT 那样受活性检查约束。
 FONT_SERIF = "'Songti SC','Source Han Serif SC','Noto Serif SC',serif"
-FONT_NUM = FONT_SANS  # 数字跟随无衬线栈，靠 tabular-nums 对齐
 
 
 # ─────────────────────────────────────────────────────────────

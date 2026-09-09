@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 """R1 定序条 · 少类目排名比较（≤10 项）"""
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tokens as T
 from charts import _svg as S
 from charts._data import require, require_nonneg

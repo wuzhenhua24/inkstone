@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 """S3 小倍数网格 · 多实体各自一条序列（≤12 格）"""
-import sys, os
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tokens as T
 from charts import _svg as S
 from charts._data import nice_ticks, decimals_for, fmt, require, require_nonneg

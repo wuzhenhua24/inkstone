@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 """S1 日序条码 · 每天一个读数的长序列（60–120 天）"""
-import sys, os
 from datetime import date
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tokens as T
 from charts import _svg as S
 from charts._data import median, require, require_nonneg

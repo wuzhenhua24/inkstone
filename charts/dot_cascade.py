@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 """R3 点阵瀑布 · 可数单位的排名比较（项数多）"""
-import sys, os
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tokens as T
 from charts import _svg as S
 from charts._data import fmt, require, require_nonneg

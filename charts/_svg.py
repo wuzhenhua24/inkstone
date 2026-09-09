@@ -10,8 +10,6 @@
 import unicodedata
 from html import escape
 
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tokens as T
 
 
@@ -21,23 +19,40 @@ _LATIN_EM = {
     "normal": 0.56,
     "wide":   0.78,   # m w M W @ % —— 大写和宽字母
 }
-_NARROW = set("iljtfrI.,;:'\"!|()[]{}·-·")
+_NARROW = set("iljtfrI.,;:'\"!|()[]{}-")
 _WIDE = set("mwMWQGO@%&")
 
 
 def text_width(s: str, size_pt: float) -> float:
-    """返回字符串在给定字号下的估算宽度（pt）。CJK 精确，拉丁保守偏宽。"""
+    """返回字符串在给定字号下的估算宽度（pt）。CJK 精确，拉丁保守偏宽。
+
+    「歧义宽度」那一档是这里唯一需要判断的地方，见下方注释——中文副题里
+    的间隔号「·」就落在这一档，估错了每个差 0.72em。
+    """
+    cjk = has_cjk(s)
     em = 0.0
     for ch in s:
         w = unicodedata.east_asian_width(ch)
         if w in ("W", "F"):          # 汉字、全角标点、假名
             em += 1.0
+        elif w == "A":
+            # 东亚歧义宽度（UAX-11 的 Ambiguous）：同一个码位在拉丁字体里窄、
+            # 在 CJK 字体里就是整整一个字身。实测 U+00B7「·」——
+            #     Helvetica Neue / Helvetica  0.278 em
+            #     Hiragino Sans GB / 宋体      1.000 em   （差 3.6 倍）
+            # 而 SVG 的 font-family 是逐字符 fallback 的：拉丁字体排在栈前面，
+            # 装了 Inter 的机器上「·」走 Inter，只装了 Noto CJK 的机器（比如
+            # CI 的 runner）上就走 Noto Sans SC。**同一份 SVG，两台机器上
+            # 副题宽度不一样。** 印刷时作者控制不了 RIP 装了什么字体，
+            # 所以含中文的文本一律按最宽的那种算——这才是「宁可估宽」。
+            #
+            # 间隔号是副题的默认分隔符（wrap 的 sep=" · "），一行两三个，
+            # 按 0.30em 估会让整条副题少算十几 pt，恰好够冲出单栏版心。
+            em += 1.0 if cjk else _LATIN_EM["normal"]
         elif ch in _NARROW:
             em += _LATIN_EM["narrow"]
         elif ch in _WIDE:
             em += _LATIN_EM["wide"]
-        elif w == "A":               # 歧义宽度（希腊、西里尔），按拉丁算
-            em += _LATIN_EM["normal"]
         else:
             em += _LATIN_EM["normal"]
     return em * size_pt
@@ -174,6 +189,15 @@ def path(d, stroke=None, width=T.STROKE["data"], fill="none", cap="butt"):
     stroke = T.INK if stroke is None else stroke
     return (f'<path d="{d}" fill="{fill}" stroke="{stroke}" '
             f'stroke-width="{T.px(width)}" stroke-linecap="{cap}"/>')
+
+
+def area(d, fill):
+    """闭合填充区域（堆叠带的一层）。只有填充，没有描边。
+
+    不能拿 path() 凑：那个函数总会写 stroke-width，而一块无描边的区域
+    只能写 0，恰好会被校验器的线宽地板（0.35pt）当成一条画不出来的线拦下。
+    """
+    return f'<path d="{d}" fill="{fill}"/>'
 
 
 def circle(cx, cy, r, fill=None, opacity=None):

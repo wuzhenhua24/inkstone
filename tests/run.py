@@ -3,7 +3,7 @@
 
 六组检查：
   1 渲染      全部图型能画出来
-  2 校验      产物 / token / 目录全部合规
+  2 校验      产物 / token / 目录 / README 全部合规
   3 反例      校验器仍然抓得住违规，条数不少于预期
   4 越界      每张有上限的图型都会拒绝超限数据
   4.1 负值    长度编码的图会拒绝负值，而不是画出零长条
@@ -11,6 +11,7 @@
   4.3 留位    标签抽稀按实测宽度，退回字符数估宽必须被抓住
   4.4 色板    切色板后原语默认参数必须跟着走，不许漏出 mono 灰
   4.5 版心    13 张 × 5 档栏宽全部渲染并合规；图形区高度随栏宽增长
+  4.7 字宽    东亚歧义宽度字符在中文串里按整字身算（「·」实测差 3.6 倍）
   5 确定性    跑两次字节相同（演示数据不许用随机数）
   5.5 导出    PDF / PNG 真的产出且不是空白页
   6 目录闭环  catalog 里每个编号都有渲染产物
@@ -25,7 +26,7 @@ os.chdir(ROOT)
 import tests.badcase as badcase
 import tokens as T
 from charts import _svg
-from scripts.validate import check, check_tokens, check_catalog
+from scripts.validate import check, check_tokens, check_catalog, check_docs
 
 fails = []
 
@@ -66,11 +67,11 @@ svgs = sorted(f for f in os.listdir("out") if f.endswith(".svg")
 
 # 2 · 校验 ─────────────────────────────────────────────────────
 group("校验")
-for f in (check_tokens(), check_catalog()):
+for f in (check_tokens(), check_catalog(), check_docs()):
     for m in f:
         bad(m)
-if not check_tokens() and not check_catalog():
-    ok("tokens.py 与 catalog.md 自检通过")
+if not (check_tokens() or check_catalog() or check_docs()):
+    ok("tokens.py / catalog.md / README.md 自检通过")
 n_bad = 0
 for name in svgs:
     for m in check(os.path.join("out", name)):
@@ -311,15 +312,56 @@ if not thin:
 # 4.6 · 目录声明一致性 ─────────────────────────────────────────
 # 「类目上限」列里写了数字就必须标「代码强制」并真的拦住。这条规则本身
 # 也要有反例——否则它跟着 catalog 一起漂掉都没人知道。
-group("目录声明一致性")
-_cat_src = open("catalog.md", encoding="utf-8").read()
-_doctored = _cat_src.replace("≤10（代码强制）", "≤10")
-if _doctored == _cat_src:
-    bad("反例没生效：catalog.md 里找不到 R2 的「≤10（代码强制）」，锚点漂了")
-elif not check_catalog(_doctored):
-    bad("抹掉 R2 的「代码强制」竟然没被抓住——目录声明一致性规则失效了")
-else:
-    ok("抹掉一处「代码强制」会被当场抓住")
+group("文档声明一致性")
+_cat = open("catalog.md", encoding="utf-8").read()
+_rme = open("README.md", encoding="utf-8").read()
+DOC_CASES = [
+    ("catalog 抹掉一处「代码强制」", lambda: check_catalog(_cat.replace("≤10（代码强制）", "≤10")),
+     "≤10（代码强制）" in _cat),
+    ("catalog 分区标回「待建」", lambda: check_catalog(
+        _cat.replace("## S 系 · 时间序列", "## S 系 · 时间序列（待建）")),
+     "## S 系 · 时间序列" in _cat),
+    ("README 行数声明写错", lambda: check_docs(
+        re.sub(r"决策规则，\d+ 行", "决策规则，78 行", _rme)),
+     bool(re.search(r"决策规则，\d+ 行", _rme))),
+    ("README 图型表少一行", lambda: check_docs(
+        _rme.replace("| M2 | 散点带回归 | 两个连续变量是否共变 | 85mm 单栏 |\n", "")),
+     "| M2 | 散点带回归 |" in _rme),
+]
+toothless = 0
+for label, run, anchored in DOC_CASES:
+    if not anchored:
+        bad(f"反例锚点漂了，改不出违规：{label}")
+        toothless += 1
+    elif not run():
+        bad(f"「{label}」没被抓住——对应规则失效了")
+        toothless += 1
+if not toothless:
+    ok(f"{len(DOC_CASES)} 处文档漂移全部会被当场抓住")
+
+# 4.7 · 字宽估计 ───────────────────────────────────────────────
+# 「·」这类东亚歧义宽度（UAX-11 Ambiguous）字符，在拉丁字体里 0.278em、
+# 在 CJK 字体里 1.000em——实测自 Helvetica Neue 与 Hiragino Sans GB 的
+# hmtx 表。SVG 逐字符 fallback，所以同一份文件在装了 Inter 的机器和只装
+# Noto CJK 的机器（CI 的 runner 就是）上宽度不同。印刷控制不了 RIP 的字体，
+# 只能按最宽的算。这一档估窄了，中文副题一行两三个间隔号就少算十几 pt。
+group("字宽估计")
+_narrow_stand_in = "l"          # 一个确定属于窄档的 ASCII 字符
+cjk_with = _svg.text_width("甲 · 乙 · 丙", 9.0)
+cjk_without = _svg.text_width(f"甲 {_narrow_stand_in} 乙 {_narrow_stand_in} 丙", 9.0)
+lat_with = _svg.text_width("a · b", 9.0)
+wrong = []
+if cjk_with - cjk_without < 9.0 * 2 * (1.0 - 0.30) - 0.01:
+    wrong.append(f"中文串里的「·」没有按整字身算：两个间隔号只多出 "
+                 f"{cjk_with - cjk_without:.1f}pt，应为 {9.0 * 2 * 0.7:.1f}pt 以上")
+if lat_with >= _svg.text_width("a m b", 9.0):
+    wrong.append("纯拉丁串里的「·」被当成了全角——那一档只在中文上下文成立")
+if "·" in _svg._NARROW:
+    wrong.append("「·」还留在 _NARROW 里，会抢在歧义宽度判定之前被当成窄字符")
+for m in wrong:
+    bad(m)
+if not wrong:
+    ok("歧义宽度按上下文取宽：中文串里 1.0em，纯拉丁串里按拉丁算")
 
 # 5 · 确定性 ───────────────────────────────────────────────────
 group("确定性")

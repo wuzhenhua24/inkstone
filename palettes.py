@@ -11,9 +11,6 @@
 色相辨别。需要区分类目时用直接标注（见 S2 细线族），不靠色相。
 彩度整体压低，是为了印刷上不刺眼、也为了留出网点空间。
 """
-import sys, os
-
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from charts._color import at_lstar, lstar
 
 # GRAY 的七级明度。彩色档必须逐级对齐这些值。

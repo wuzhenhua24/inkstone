@@ -128,7 +128,7 @@ def check(path):
                 fails.append(f"灰度过近：{fills[i]} vs {fills[j]}（差 {d:.1f} L* < 10）")
 
     # 7 · 印刷产物里不该有的东西
-    if root.iter(f"{NS}image").__next__() if False else re.search(r"<image\b", src):
+    if re.search(r"<image\b", src):
         fails.append("含 <image> 光栅图——矢量产物里不允许，放大会糊")
     if re.search(r"<animate|@keyframes|animation\s*:", src):
         fails.append("含动画——印刷产物里没有动画这回事")
@@ -267,6 +267,22 @@ def check_catalog(src=None):
             if f"# ════ {num} " not in body:
                 fails.append(f"{impl} 缺少 `# ════ {num} 图名 ════` 标记块")
 
+    # 分区标题挂着「待建」，底下却已经有实现——这是文档腐坏最典型的样子：
+    # 建完了忘了摘标记，读者按标题以为这一族还没做。四个 S/C/D/M 分区
+    # 全都挂了半年多才被发现，正因为没人机器判。
+    section = None
+    built = {}
+    for line in src.splitlines():
+        m = re.match(r"^##\s+(.*)$", line)
+        if m:
+            section = m.group(1).strip()
+            built.setdefault(section, [False, "待建" in section])
+        elif section and re.match(r"^\|\s*[RSCDM]\d+\s*\|.*`[^`]+`\s*\|\s*$", line):
+            built[section][0] = True
+    for name, (has_impl, marked) in built.items():
+        if has_impl and marked:
+            fails.append(f"catalog.md 分区「{name}」标着「待建」，底下却已经有实现了")
+
     # 「类目上限」列里写了数字，就必须标「代码强制」。
     # 一张表里七条标了「代码强制」、两条没标，读者根本分不清哪条会真拦——
     # 而没被代码兜住的那两条，迟早会有人越过去。声明和实现的漂移
@@ -286,6 +302,45 @@ def check_catalog(src=None):
     return fails
 
 
+def check_docs(readme=None, root=None):
+    """README 里对别的文件的数字声明必须成立。
+
+    「SKILL.md # 决策规则，108 行」这类数字是有信息量的——一份决策文档
+    涨到三百行就已经失败了——但它同时是最容易漂的东西：改了 SKILL.md
+    没人会想起回头改 README。这两轮修 bug 就把它手动同步了两次，
+    第三次一定会忘。能机器判就别指望人记得。
+
+    readme / root 可注入，供反例测试喂一份写坏的 README。
+    """
+    if root is None:
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if readme is None:
+        readme = open(os.path.join(root, "README.md"), encoding="utf-8").read()
+    fails = []
+
+    claims = re.findall(r"^(\S+\.md)\s+#[^\n]*?(\d+)\s*行", readme, re.M)
+    if not claims:
+        fails.append("README.md 的结构块里一条「N 行」声明都没有——正则漂了？")
+    for fname, n in claims:
+        path = os.path.join(root, fname)
+        if not os.path.exists(path):
+            fails.append(f"README.md 声称 {fname} 有 {n} 行，但这个文件不存在")
+            continue
+        real = len(open(path, encoding="utf-8").read().splitlines())
+        if int(n) != real:
+            fails.append(f"README.md 说 {fname} 是 {n} 行，实际 {real} 行")
+
+    # README 的图型表和 catalog 的声明张数必须对得上。两张表各写各的，
+    # 加了图只改一处是迟早的事。
+    cat = open(os.path.join(root, "catalog.md"), encoding="utf-8").read()
+    declared = re.search(r"^#[^\n]*·\s*(\d+)\s*张", cat, re.M)
+    rows = re.findall(r"^\|\s*([RSCDM]\d+)\s*\|", readme, re.M)
+    if declared and len(rows) != int(declared.group(1)):
+        fails.append(f"README.md 的图型表有 {len(rows)} 行，"
+                     f"catalog.md 声明 {declared.group(1)} 张——两张表漂开了")
+    return fails
+
+
 if __name__ == "__main__":
     targets = sys.argv[1:] or []
     total = 0
@@ -299,6 +354,11 @@ if __name__ == "__main__":
     for f in cat:
         print(f"    {f}")
     total += len(cat)
+    doc = check_docs()
+    print("✓ README.md" if not doc else "✗ README.md")
+    for f in doc:
+        print(f"    {f}")
+    total += len(doc)
     for p in targets:
         fails = check(p)
         total += len(fails)

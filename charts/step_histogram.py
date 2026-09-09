@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 """D1 阶梯直方 · 单变量连续分布"""
-import sys, os
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tokens as T
 from charts import _svg as S
 from charts._data import histogram, median, nice_ticks, fmt, decimals_for

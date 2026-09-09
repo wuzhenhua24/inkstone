@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 """M2 散点带回归 · 两个连续变量"""
-import sys, os
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tokens as T
 from charts import _svg as S
 from charts._data import linreg, nice_ticks, fmt, decimals_for, require

@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 """D3 五数摘要 · 分位数 + 异常值（≤8 组）"""
-import sys, os
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tokens as T
 from charts import _svg as S
 from charts._data import five_number, nice_ticks, require

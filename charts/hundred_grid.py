@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 """C1 百格方阵 · 100% 构成（≤6 类）"""
-import sys, os
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tokens as T
 from charts import _svg as S
 from charts._data import decimals_for, require, require_nonneg

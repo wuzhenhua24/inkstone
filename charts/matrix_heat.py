@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 """M1 矩阵热力 · 两个离散维度 × 数值（≤100 格）"""
-import sys, os
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tokens as T
 from charts import _svg as S
 from charts._data import require

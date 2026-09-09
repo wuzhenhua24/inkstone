@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 """S2 细线族 · 3–6 条序列同轴比较"""
-import sys, os
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tokens as T
 from charts import _svg as S
 from charts._data import nice_ticks, require
@@ -99,7 +96,7 @@ def line_family(series, x_labels, title=None, subtitle=None, source=None,
         raise ValueError(f"S2 有两条线的（灰阶, 线宽）完全相同：{combos}")
 
     for si, (name, vs) in enumerate(series):
-        d = "M" + " L".join(f"{S.T.px(sx(i))} {S.T.px(sy(v))}" for i, v in enumerate(vs))
+        d = "M" + " L".join(f"{T.px(sx(i))} {T.px(sy(v))}" for i, v in enumerate(vs))
         parts.append(S.path(d, inks[si], widths[si], cap="round"))
 
     # 线端标签
