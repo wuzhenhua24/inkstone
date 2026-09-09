@@ -1,8 +1,11 @@
 name: ci
 
 on:
+  # 只有 main 的推送直接触发；其余分支靠 PR 触发。
+  # 写成 branches: ['**'] 会让同仓库的 PR 跑两遍——推分支算一次 push，
+  # 开 PR 又算一次 pull_request，两遍结果一模一样。
   push:
-    branches: ['**']
+    branches: [main]
   pull_request:
 
 jobs:
