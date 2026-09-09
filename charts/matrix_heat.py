@@ -2,7 +2,7 @@
 """M1 矩阵热力 · 两个离散维度 × 数值（≤100 格）"""
 import tokens as T
 from charts import _svg as S
-from charts._data import require
+from charts._data import require, num
 
 MAX_CELLS = 100
 
@@ -75,7 +75,7 @@ def matrix_heat(rows, cols, values, title=None, subtitle=None, source=None,
                 dark = lv >= T.HEAT_FLIP
                 parts.append(S.text(
                     gx + cw * (j + 0.5), y + ch / 2 + T.SIZE["value"] * 0.35,
-                    f"{v:,g}{unit}", T.SIZE["value"],
+                    num(v, unit), T.SIZE["value"],
                     T.PAPER if dark else T.GRAY[0], T.WEIGHT["value"],
                     anchor="middle", on=bg,
                     on_box=(gx + cw * j + 0.4, y + 0.4, cw - 0.8, ch - 0.8)))
@@ -88,7 +88,7 @@ def matrix_heat(rows, cols, values, title=None, subtitle=None, source=None,
     for k, c in enumerate(T.HEAT):
         parts.append(S.rect(lx + k * (sw + 1.2), ly, sw, sh, c))
     lx2 = lx + len(T.HEAT) * (sw + 1.2) + 2
-    parts.append(S.text(lx2, ly + sh - 1, f"高 · {lo:,g}–{hi:,g}{unit}",
+    parts.append(S.text(lx2, ly + sh - 1, f"高 · {num(lo)}–{num(hi, unit)}",
                         T.SIZE["label"], T.GRAY[3]))
 
     H = ly + sh + T.GAP["plot_source"] + T.SIZE["source"] + 2

@@ -6,6 +6,8 @@
   2 校验      产物 / token / 目录 / README 全部合规
   3 反例      校验器仍然抓得住违规，条数不少于预期
   4 越界      每张有上限的图型都会拒绝超限数据
+  4.05 界内   恰好取到声明的上限那一档，必须画得出来且合规
+  4.06 数值   数值永不排成科学计数法（:,g 在 |v| ≥ 1e6 时会）
   4.1 负值    长度编码的图会拒绝负值，而不是画出零长条
   4.2 退化    空数据一律友好拒绝；全等值样本仍要画得出来
   4.3 留位    标签抽稀按实测宽度，退回字符数估宽必须被抓住
@@ -133,6 +135,135 @@ for label, fn, args in GUARDS:
         pass
 if not leaked:
     ok(f"{len(GUARDS)} 道上限全部生效")
+
+# R3 的上限不是类目数，是「这么多点摆不摆得下」，所以上面那张表测不到它。
+# 两条路径分开测：
+#   自动定档必须无上限地跟着量级走。上一版是查表（1,2,5,…,10000），需求
+#   一旦超过最大档就一次都不 break，per_dot 停在初值 1——160 万的输入
+#   照单全收，画出 160 万个 <circle>，几十 MB、几十米高的 SVG。
+#   不抛异常、不崩溃，校验器也判不出来（它不看几何），只是没法用。
+from charts.dot_cascade import dot_cascade as _dc, per_dot_for, dots_for
+
+# 判在纯函数上，不判在产物上：这条逻辑一旦退回查表，per_dot 会回到 1，
+# 而「渲染出来再数 <circle>」意味着测试真的要去画那 30 亿个点——
+# 那是把自己挂死，不是变红。回归必须在一次函数调用里当场失败。
+blown = []
+for _vmax in (1_500_000, 1_600_000, 50_000_000, 3_000_000_000):
+    _pd = per_dot_for(_vmax, 150)
+    _n = dots_for(_vmax, _pd)
+    if _n > 150:
+        blown.append(f"vmax={_vmax:,} 定出 per_dot={_pd:,}，仍要画 {_n:,} 个点"
+                     f"（一张图摆得下 150 个）——每点当量没跟着量级走")
+for m in blown:
+    bad(m)
+# 界内的量级仍要照常出图，别为了防大数把小数据也推上高档位
+_note = _dc([("甲", 5_000), ("乙", 1_200)], title="量级",
+            subtitle="口径", source="来源")
+if _note.count("<circle") > 150:
+    bad("R3 在 5,000 这种寻常量级上画超了 150 个点")
+#   显式传进来的 per_dot 装不下时，同样不能闷头画。
+try:
+    _dc([("甲", 1_600_000)], per_dot=10, title="越界")
+    bad("R3 显式 per_dot 装不下时未被拦下——会画出十六万个点")
+    blown.append(1)
+except ValueError:
+    pass
+if not blown:
+    ok("R3 每点当量随量级无上限地走，显式传的装不下时当场拒绝")
+
+# 4.05 · 界内正例 ─────────────────────────────────────────────
+# 只测「超限会被拒」是不够的。上限声明得再响，**恰好取到上限那一档**
+# 画不出来，文档就是在替一个不存在的能力背书。S2 就是这么活下来的：
+# catalog 白纸黑字写着「≤6（代码强制）」，而线宽表末两档撞在一起，
+# 第 6 条线撞上「(灰阶, 线宽) 必须两两不同」的守卫——越界组只喂 8 条，
+# 看到 ValueError 就算过，永远碰不到第 6 条这个真正的边界。
+#
+# 上限直接从各图型的常数取，不在这里抄数字：谁把 MAX_ 调小，这一组
+# 跟着调小，声明和实现不会各走各的。
+group("界内正例")
+from charts.hundred_grid import MAX_CATS as C1_MAX
+from charts.beeswarm import MAX_GROUPS as D2_MAX_G, MAX_POINTS as D2_MAX_P
+from charts.matrix_heat import MAX_CELLS as M1_MAX
+from charts.tick_box import MAX_GROUPS as D3_MAX
+from charts.line_family import MAX_SERIES as S2_MAX
+from charts.small_multiples import MAX_PANELS as S3_MAX
+from charts.stacked_bands import MAX_LAYERS as C2_MAX
+from charts.rank_bars import MAX_CATS_NARROW as R1_MAX_N, MAX_CATS_WIDE as R1_MAX_W
+from charts.diverging_bars import MAX_CATS as R2_MAX
+from charts.day_series import MAX_DAYS as S1_MAX
+
+_xs = lambda n: [f"{i+1}月" for i in range(n)]
+_side = int(M1_MAX ** 0.5)
+
+AT_CAP = [
+    (f"R1 窄栏 {R1_MAX_N} 项", rank_bars,
+     ([(f"类{i}", 100 - i * 7) for i in range(R1_MAX_N)],), {}),
+    (f"R1 宽栏 {R1_MAX_W} 项", rank_bars,
+     ([(f"类{i}", 100 - i * 7) for i in range(R1_MAX_W)],), {"column": "double"}),
+    (f"R2 {R2_MAX} 项", diverging_bars,
+     ([(f"类{i}", 20 - i * 5) for i in range(R2_MAX)],), {}),
+    (f"C1 {C1_MAX} 类", hundred_grid,
+     ([("甲", 30), ("乙", 25), ("丙", 20), ("丁", 13), ("戊", 7), ("己", 5)][:C1_MAX],), {}),
+    (f"C2 {C2_MAX} 层", stacked_bands,
+     ([(f"层{i}", [10 + i, 12 + i, 11 + i]) for i in range(C2_MAX)], _xs(3)), {}),
+    (f"S1 {S1_MAX} 天", day_series,
+     ([(date(2026, 1, 1) + timedelta(days=i), 100 + (i % 17)) for i in range(S1_MAX)],), {}),
+    (f"S2 {S2_MAX} 条", line_family,
+     ([(f"序列{i}", [10 + i * 3 + j for j in range(12)]) for i in range(S2_MAX)], _xs(12)), {}),
+    (f"S3 {S3_MAX} 格", small_multiples,
+     ([(f"格{i}", [5 + i, 8 + i, 6 + i]) for i in range(S3_MAX)], _xs(3)), {}),
+    (f"D2 {D2_MAX_G} 组", beeswarm,
+     ([(f"组{i}", [10 + (j * 7 + i * 3) % 40 for j in range(20)])
+       for i in range(D2_MAX_G)],), {}),
+    (f"D2 {D2_MAX_P} 点", beeswarm,
+     ([("甲", [10 + (j * 13) % 50 for j in range(D2_MAX_P)])],), {}),
+    (f"D3 {D3_MAX} 组", tick_box,
+     ([(f"组{i}", [5 + i, 9 + i, 12 + i, 15 + i, 21 + i]) for i in range(D3_MAX)],), {}),
+    (f"M1 {M1_MAX} 格", matrix_heat,
+     ([f"行{i}" for i in range(_side)], [f"列{j}" for j in range(_side)],
+      [[(i * _side + j) % 40 for j in range(_side)] for i in range(_side)]), {}),
+]
+unreachable = 0
+for label, fn, args, kw in AT_CAP:
+    tmp = os.path.join("out", "_atcap.svg")
+    try:
+        svg = fn(*args, title="界内正例", subtitle="口径 · 单位", source="来源", **kw)
+    except ValueError as e:
+        bad(f"{label}：声明的上限画不出来——{e}")
+        unreachable += 1
+        continue
+    with open(tmp, "w", encoding="utf-8") as fh:
+        fh.write(svg)
+    for m in check(tmp):
+        bad(f"{label}：恰好取到上限时不合规——{m}")
+        unreachable += 1
+    os.remove(tmp)
+if not unreachable:
+    ok(f"{len(AT_CAP)} 处声明的上限，恰好取到那一档都画得出来且合规")
+
+# 4.06 · 数值格式 ─────────────────────────────────────────────
+# `f"{v:,g}"` 在 |v| ≥ 1e6 时切到科学计数法：营收 1234567 印成
+# 「1.23457e+06」。校验器第 12 条判产物，这一组判函数本身——两头都堵上，
+# 因为这类错的特征就是**一路合法**：字号、字色、宽度、对比度全部合规。
+group("数值格式")
+from charts._data import num as _num
+
+SCI = re.compile(r"\d[eE][+-]\d")
+_vals = [0, 1, 12.5, 189.5, 999.5, 3820, 999_999, 1_000_000, 1_234_567,
+         89_000_000, 3e9, -1_234_567, 0.045, 0.0001, 1e-9]
+_sci = [f"num({v!r}) = {_num(v)}" for v in _vals if SCI.search(_num(v))]
+for m in _sci:
+    bad(f"数值排成了科学计数法：{m}")
+# 对照：这些值里必须真有会让 :,g 翻车的，否则这组测试没有牙齿。
+_would = [v for v in _vals if SCI.search(f"{v:,g}")]
+if not _would:
+    bad("对照用例里没有一个会让 :,g 切到科学计数法——这组测试没有牙齿")
+elif not _sci:
+    ok(f"{len(_vals)} 个量级 num() 全部不走科学计数法"
+       f"（其中 {len(_would)} 个 :,g 会翻车）")
+# 显式 decimals 仍要补零对齐，不许被自动档的去尾逻辑吃掉
+if _num(95.0, decimals=1) != "95.0" or _num(3, decimals=2) != "3.00":
+    bad("num() 传了 decimals 还去尾——同一组数的小数位对不齐了")
 
 # 4.1 · 负值防护 ───────────────────────────────────────────────
 # 长度 / 个数 / 面积 ∝ 数值的图收到负值时，几何没有对应的画法：

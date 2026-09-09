@@ -12,7 +12,7 @@
 |---|---|---|---|---|---|---|
 | R1 | 定序条 | 类目 → 单一数值，需读出高低次序 | single / a4body | 窄栏 ≤8，宽栏 ≤12（代码强制） | 有正负 → R2（代码强制）；>10 项 → R3 | `charts/rank_bars.py` |
 | R2 | 分岔条 | 类目 → 可正可负的数值（增减、盈亏） | single / a4body | ≤10（代码强制） | 全为正 → R1 定序条 | `charts/diverging_bars.py` |
-| R3 | 点阵瀑布 | 类目 → 可数的整数量，项数多 | single / a4body | — | 有负值 → R2（代码强制）；数值不可数 → R1 | `charts/dot_cascade.py` |
+| R3 | 点阵瀑布 | 类目 → 可数的整数量，项数多 | single / a4body | — | 有负值 → R2（代码强制）；数值不可数 → R1；显式 per_dot 摆不下 → 拒绝并算出该传的值（代码强制） | `charts/dot_cascade.py` |
 
 ## S 系 · 时间序列
 

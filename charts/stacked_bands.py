@@ -2,7 +2,7 @@
 """C2 堆叠带 · 构成随时间变化（≤5 层）"""
 import tokens as T
 from charts import _svg as S
-from charts._data import nice_ticks, decimals_for, fmt, require, require_nonneg
+from charts._data import nice_ticks, decimals_for, fmt, require, require_nonneg, num
 from charts.line_family import _place_labels
 
 MAX_LAYERS = 5
@@ -41,7 +41,7 @@ def stacked_bands(layers, x_labels, title=None, subtitle=None, source=None,
     ymax = ticks[-1]
 
     lab_w = max(S.text_width(nm, T.SIZE["label"]) for nm, _ in layers)
-    px0 = x0 + max(S.text_width(f"{t:,g}", T.SIZE["label"]) for t in ticks) + 4
+    px0 = x0 + max(S.text_width(num(t), T.SIZE["label"]) for t in ticks) + 4
     px1 = x1 - lab_w - 7        # 薄带的名字要退到右侧，先把位置留出来
 
     plot_h = T.plot_height(px1 - px0, "band")
@@ -57,7 +57,7 @@ def stacked_bands(layers, x_labels, title=None, subtitle=None, source=None,
     parts = []
     for t in ticks:
         parts.append(S.line(px0, sy(t), px1, sy(t), T.GRAY[6], T.STROKE["hairline"]))
-        parts.append(S.text(px0 - 4, sy(t) + T.SIZE["label"] * 0.35, f"{t:,g}",
+        parts.append(S.text(px0 - 4, sy(t) + T.SIZE["label"] * 0.35, num(t),
                             T.SIZE["label"], T.GRAY[3], anchor="end"))
 
     # 逐层累加，画成闭合多边形

@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tokens as T
 from charts import _svg as S
 
-EXPECT = 11
+EXPECT = 12
 
 
 def build():
@@ -46,6 +46,12 @@ def build():
         #    「till」字符最多而「环比增速」最宽，按字符数留位欠 21pt。
         f'<text x="6" y="178" font-size="7.5" fill="{T.GRAY[0]}" font-family="{T.FONT_SANS}">环比增速</text>',
         f'<text x="20" y="178" font-size="7.5" fill="{T.GRAY[0]}" font-family="{T.FONT_SANS}">同比增速</text>',
+        # 12 数值排成科学计数法。这正是 `f"{v:,g}"` 在营收 ≥ 1e6 时的产物：
+        #    字号、字色、字体栈、宽度、对比度**全部合规**，旧校验器一条都
+        #    判不出来——它是一段完全合法的文字，只有拿到纸的读者知道
+        #    这张图作废了。不报错的错图，是这个项目最该防的一类。
+        f'<text x="6" y="190" font-size="8" fill="{T.GRAY[0]}" '
+        f'font-family="{T.FONT_SANS}">1.23457e+06</text>',
     ])
     # 11 四件套缺来源行：canvas 的第四个参数留空。图题和副题都在，
     #    唯独没有来源行——读者无从判断这些数字是哪来的、样本多大。

@@ -2,7 +2,7 @@
 """D3 五数摘要 · 分位数 + 异常值（≤8 组）"""
 import tokens as T
 from charts import _svg as S
-from charts._data import five_number, nice_ticks, require
+from charts._data import five_number, nice_ticks, require, num
 
 MAX_GROUPS = 8
 
@@ -76,7 +76,7 @@ def tick_box(groups, title=None, subtitle=None, source=None,
     # 共享 x 轴
     parts.append(S.line(x0, ay, x1, ay, T.GRAY[3], T.STROKE["rule"]))
     for t in ticks:
-        parts.append(S.text(sx(t), ay + 3 + T.SIZE["label"], f"{t:,g}",
+        parts.append(S.text(sx(t), ay + 3 + T.SIZE["label"], num(t),
                             T.SIZE["label"], T.GRAY[3], anchor="middle"))
 
     H = ay + axis_h + T.GAP["plot_source"] + T.SIZE["source"]

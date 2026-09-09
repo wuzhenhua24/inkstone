@@ -31,7 +31,7 @@ def require_nonneg(pairs, code, alt="R2 分岔条"):
     """
     neg = [(n, v) for n, v in pairs if v < 0]
     if neg:
-        shown = "、".join(f"{n}={v:,g}" for n, v in neg[:3])
+        shown = "、".join(f"{n}={num(v)}" for n, v in neg[:3])
         more = f" 等 {len(neg)} 项" if len(neg) > 3 else ""
         raise ValueError(
             f"{code} 是从零点单向长出来的图，不接受负值：{shown}{more}。"
@@ -105,6 +105,35 @@ def decimals_for(vals, eps=0.05):
     小数位参差不齐，读者会以为精度不同。
     """
     return 1 if any(abs(v - round(v)) > eps for v in vals) else 0
+
+
+def num(v, unit="", decimals=None):
+    """数值的印刷写法。**永不走科学计数法。**
+
+    `f"{v:,g}"` 在 |v| ≥ 1e6 时会切到科学计数法：营收 1234567 印成
+    「1.23457e+06」。这在研报和期刊里是当场作废的一张图，而校验器
+    判不出来——那是一段完全合法的文字，字号、字色、宽度全部合规，
+    只有读者知道它没法读。这个项目最怕的就是这一类：**不报错的错图。**
+
+    decimals 显式传入时按位数补零（同一组数要对齐小数位，见 decimals_for）；
+    不传则按量级自动定三位有效数字，并去掉尾随的零。
+    """
+    auto = decimals is None
+    if auto:
+        a = abs(v)
+        if a == 0:
+            decimals = 0
+        else:
+            # 和 `:g` 同样的六位有效数字——**唯一的差别是绝不切到科学计数法**。
+            # 有效位数写少一点看着更清爽，但那会顺手抹掉真实精度：中位数
+            # 189.5 印成「190」、106.5 印成「106」（half-even 还让两者
+            # 往不同方向倒）。这个函数的职责是修科学计数法，不是替调用方
+            # 决定精度——要少几位，显式传 decimals。
+            decimals = min(12, max(0, 5 - int(math.floor(math.log10(a)))))
+    s = f"{v:,.{decimals}f}"
+    if auto and "." in s:
+        s = s.rstrip("0").rstrip(".")
+    return s + unit
 
 
 def fmt(v, decimals=0):

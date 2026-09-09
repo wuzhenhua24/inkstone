@@ -2,7 +2,7 @@
 """M2 散点带回归 · 两个连续变量"""
 import tokens as T
 from charts import _svg as S
-from charts._data import linreg, nice_ticks, fmt, decimals_for, require
+from charts._data import linreg, nice_ticks, fmt, decimals_for, require, num
 
 
 # ════ M2 散点带回归 ════
@@ -21,7 +21,7 @@ def scatter_fit(points, title=None, subtitle=None, source=None,
 
     xt = nice_ticks(min(xs), max(xs), 5)
     yt = nice_ticks(min(ys), max(ys), 4)
-    px0 = x0 + max(S.text_width(f"{t:,g}", T.SIZE["label"]) for t in yt) + 4
+    px0 = x0 + max(S.text_width(num(t), T.SIZE["label"]) for t in yt) + 4
     plot_h = T.plot_height(x1 - px0, "cloud")
     top = S.head_height(title, subtitle, W)
     base = top + plot_h
@@ -35,7 +35,7 @@ def scatter_fit(points, title=None, subtitle=None, source=None,
     parts = []
     for t in yt:
         parts.append(S.line(px0, sy(t), x1, sy(t), T.GRAY[6], T.STROKE["hairline"]))
-        parts.append(S.text(px0 - 4, sy(t) + T.SIZE["label"] * 0.35, f"{t:,g}",
+        parts.append(S.text(px0 - 4, sy(t) + T.SIZE["label"] * 0.35, num(t),
                             T.SIZE["label"], T.GRAY[3], anchor="end"))
 
     do_fit = fit and len(points) >= min_n_for_fit

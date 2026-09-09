@@ -2,7 +2,7 @@
 """D1 阶梯直方 · 单变量连续分布"""
 import tokens as T
 from charts import _svg as S
-from charts._data import histogram, median, nice_ticks, fmt, decimals_for
+from charts._data import histogram, median, nice_ticks, fmt, decimals_for, num
 
 
 # ════ D1 阶梯直方 ════
@@ -20,7 +20,7 @@ def step_histogram(values, title=None, subtitle=None, source=None,
     yt = nice_ticks(0, cmax, 4)
     ymax = yt[-1]
 
-    px0 = x0 + max(S.text_width(f"{t:,g}", T.SIZE["label"]) for t in yt) + 4
+    px0 = x0 + max(S.text_width(num(t), T.SIZE["label"]) for t in yt) + 4
     plot_h = T.plot_height(x1 - px0, "dist")
     top = S.head_height(title, subtitle, W)
     base = top + plot_h
@@ -30,7 +30,7 @@ def step_histogram(values, title=None, subtitle=None, source=None,
     for t in yt:
         gy = base - plot_h * t / ymax
         parts.append(S.line(px0, gy, x1, gy, T.GRAY[6], T.STROKE["hairline"]))
-        parts.append(S.text(px0 - 4, gy + T.SIZE["label"] * 0.35, f"{t:,g}",
+        parts.append(S.text(px0 - 4, gy + T.SIZE["label"] * 0.35, num(t),
                             T.SIZE["label"], T.GRAY[3], anchor="end"))
 
     # 浅填充给出面积感，深阶梯线给出形状。只填充会糊，只画线会显得空。

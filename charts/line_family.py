@@ -2,7 +2,7 @@
 """S2 细线族 · 3–6 条序列同轴比较"""
 import tokens as T
 from charts import _svg as S
-from charts._data import nice_ticks, require
+from charts._data import nice_ticks, require, num
 
 MAX_SERIES = 6
 
@@ -67,7 +67,7 @@ def line_family(series, x_labels, title=None, subtitle=None, source=None,
 
     # y 轴刻度标签也要装订线。x0 是版心左界，不是图形区左界——
     # 两者混为一谈，标签就会从纸外开始画。
-    px0 = x0 + max(S.text_width(f"{t:,g}", T.SIZE["label"]) for t in ticks) + 4
+    px0 = x0 + max(S.text_width(num(t), T.SIZE["label"]) for t in ticks) + 4
 
     plot_h = T.plot_height(px1 - px0, "series")
     axis_h = T.SIZE["label"] + 8
@@ -83,12 +83,16 @@ def line_family(series, x_labels, title=None, subtitle=None, source=None,
     parts = []
     for t in ticks:                       # 网格先画，线压在上面
         parts.append(S.line(px0, sy(t), px1, sy(t), T.GRAY[6], T.STROKE["hairline"]))
-        parts.append(S.text(px0 - 4, sy(t) + T.SIZE["label"] * 0.35, f"{t:,g}",
+        parts.append(S.text(px0 - 4, sy(t) + T.SIZE["label"] * 0.35, num(t),
                             T.SIZE["label"], T.GRAY[3], anchor="end"))
 
-    # 灰只有 4 档，线宽补足到 6 条可分
+    # 灰只有 4 档，线宽补足到 MAX_SERIES 条可分。
+    # 这张表必须能撑满 MAX_SERIES——上一版是 (1.5,1.15,1.0,1.0,0.75,0.75)，
+    # 末两档撞在一起，第 6 条线当场被下面的守卫拦下。于是 catalog 白纸黑字
+    # 写着「≤6（代码强制）」，而 6 根本画不出来：文档在替一个不存在的能力背书。
+    # 越界测试只测「超限会被拒」，测不出这种事，所以另有一组界内正例守着。
     inks = [T.GRAY[min(i, T.TEXT_SAFE_MAX)] for i in range(len(series))]
-    widths = [T.STROKE["data"] * w for w in (1.5, 1.15, 1.0, 1.0, 0.75, 0.75)]
+    widths = [T.STROKE["data"] * w for w in (1.6, 1.35, 1.15, 1.0, 0.85, 0.7)]
     # 灰档不够用时靠线宽补，所以 (灰, 线宽) 的组合必须两两不同。
     # 把线宽表改平会让两条线彻底同貌，这里当场拦下。
     combos = list(zip(inks, widths))[:len(series)]

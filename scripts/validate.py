@@ -185,6 +185,19 @@ def check(path):
         if key not in slots:
             fails.append(f"四件套缺「{cn}」——读者不看代码，只看这几行")
 
+    # 12 · 数值不得排成科学计数法。`f"{v:,g}"` 在 |v| ≥ 1e6 时会切过去，
+    #      于是研报里的营收印成「1.23457e+07」。这是本项目最怕的那一类错：
+    #      字号、字色、宽度、对比度全部合规，校验器原本一条都判不出来，
+    #      只有拿到纸的人知道这张图作废了。改数值格式化很容易，
+    #      难的是让它不再漂回去——所以判在产物上，不判在调用点上。
+    for el in root.iter(f"{NS}text"):
+        s = "".join(el.itertext())
+        m = re.search(r"\d[eE][+-]\d", s)
+        if m:
+            fails.append(f"数值排成了科学计数法：「{s}」——印刷图里没人读 e+06，"
+                         f"用 charts._data.num()")
+            break
+
     # 8 · 字体栈必须中西分家（拉丁在前、CJK 在后，靠逐字符 fallback）
     for el in root.iter(f"{NS}text"):
         fam = el.get("font-family", "")

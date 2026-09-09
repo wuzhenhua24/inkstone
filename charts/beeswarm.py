@@ -2,7 +2,7 @@
 """D2 蜂群 · 逐条记录的堆积分布（40–180 点，≤6 组）"""
 import tokens as T
 from charts import _svg as S
-from charts._data import median, nice_ticks, require
+from charts._data import median, nice_ticks, require, num
 
 MAX_GROUPS = 6
 MAX_POINTS = 180
@@ -75,7 +75,7 @@ def beeswarm(groups, title=None, subtitle=None, source=None,
     dlo, dhi = min(lo, ticks[0]), max(hi, ticks[-1])
 
     # 中位数标注要占右侧装订线，点必须止步于此
-    med_w = max(S.text_width(f"中位数 {median(vs):,g}{unit}", T.SIZE["label"])
+    med_w = max(S.text_width(f"中位数 {num(median(vs), unit)}", T.SIZE["label"])
                 for _, vs in groups) if show_median else 0
     px1 = x1 - (med_w + 8 if show_median else 0)
 
@@ -109,7 +109,7 @@ def beeswarm(groups, title=None, subtitle=None, source=None,
             parts.append(S.line(mx, cy - half - 1.5, mx, cy + half + 1.5,
                                 T.GRAY[0], T.STROKE["data"]))
             parts.append(S.text(x1, cy + T.SIZE["label"] * 0.35,
-                                f"中位数 {m:,g}{unit}", T.SIZE["label"],
+                                f"中位数 {num(m, unit)}", T.SIZE["label"],
                                 T.GRAY[3], anchor="end"))
         y_cursor = cy + half + 11
 
@@ -119,7 +119,7 @@ def beeswarm(groups, title=None, subtitle=None, source=None,
     for t in ticks:
         tx = sx(t)
         parts.append(S.line(tx, ay, tx, ay + 3, T.GRAY[3], T.STROKE["rule"]))
-        parts.append(S.text(tx, ay + 3 + T.SIZE["label"], f"{t:,g}",
+        parts.append(S.text(tx, ay + 3 + T.SIZE["label"], num(t),
                             T.SIZE["label"], T.GRAY[3], anchor="middle"))
 
     H = ay + axis_h + T.GAP["plot_source"] + T.SIZE["source"]

@@ -2,7 +2,7 @@
 """S3 小倍数网格 · 多实体各自一条序列（≤12 格）"""
 import tokens as T
 from charts import _svg as S
-from charts._data import nice_ticks, decimals_for, fmt, require, require_nonneg
+from charts._data import nice_ticks, decimals_for, fmt, require, require_nonneg, num
 
 MAX_PANELS = 12
 
@@ -125,7 +125,7 @@ def small_multiples(panels, x_labels, title=None, subtitle=None, source=None,
                 parts.append(S.text(sx(i), base + 3 + T.SIZE["label"], x_labels[i],
                                     T.SIZE["label"], T.GRAY[3], anchor=anchor))
 
-    scale_note = (f"各格共享纵轴 0–{ymax_shared:,g}{unit}" if shared_scale
+    scale_note = (f"各格共享纵轴 0–{num(ymax_shared, unit)}" if shared_scale
                   else "各格纵轴独立，格间高度不可比")
     H = top + rows * ph + 4 + T.GAP["plot_source"] + T.SIZE["source"]
     body = "\n".join(parts)

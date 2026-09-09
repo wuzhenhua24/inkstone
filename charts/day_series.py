@@ -4,7 +4,7 @@ from datetime import date
 
 import tokens as T
 from charts import _svg as S
-from charts._data import median, require, require_nonneg
+from charts._data import median, require, require_nonneg, num
 
 
 MAX_DAYS = 150
@@ -38,7 +38,7 @@ def day_series(data, title=None, subtitle=None, source=None,
     # 这一段必须排在算高度之前：图形区高度由图形区宽度定，而图形区
     # 右界正是被这条装订线切出来的。
     med = median([v for _, v in data]) if show_median else None
-    med_lab = f"中位数 {med:,g}{unit}" if show_median else ""
+    med_lab = f"中位数 {num(med, unit)}" if show_median else ""
     gutter = (S.text_width(med_lab, T.SIZE["label"]) + 6) if show_median else 0
     px1 = x1 - gutter                       # 图形区右界
 
@@ -96,7 +96,7 @@ def day_series(data, title=None, subtitle=None, source=None,
     cands = []
     for i in sorted(ranked):
         d, v = data[i]
-        txt = f"{d.month}月{d.day}日 {v:,g}{unit}"
+        txt = f"{d.month}月{d.day}日 {num(v, unit)}"
         cands.append({"i": i, "v": v, "txt": txt,
                       "cx": x0 + slot * (i + 0.5),
                       "w": S.text_width(txt, T.SIZE["value"])})

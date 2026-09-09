@@ -2,7 +2,7 @@
 """R1 定序条 · 少类目排名比较（≤10 项）"""
 import tokens as T
 from charts import _svg as S
-from charts._data import require, require_nonneg
+from charts._data import require, require_nonneg, num
 
 
 # ════ R1 定序条 ════
@@ -43,7 +43,7 @@ def rank_bars(data, title=None, subtitle=None, source=None,
 
     vmax = max(v for _, v in data) or 1
     # 数值跟在条端走，所以量程要给最长那条的数值留出位置，否则出血。
-    longest = max(S.text_width(f"{v:,g}{unit}", T.SIZE["value"]) for _, v in data)
+    longest = max(S.text_width(num(v, unit), T.SIZE["value"]) for _, v in data)
     span = (x1 - x0) - longest - 5
 
     parts = [S.line(x0, top - 2, x0, top + plot_h, T.GRAY[4], T.STROKE["rule"])]  # 零点基线
@@ -62,6 +62,6 @@ def rank_bars(data, title=None, subtitle=None, source=None,
         parts.append(S.rect(x0, by, bw, bar_h, ink))
         if show_value:
             # 数值贴条端，和条一体；不右对齐到栏边，省掉一次视线长途跋涉。
-            parts.append(S.text(x0 + bw + 4, by + bar_h - 0.3, f"{v:,g}{unit}",
+            parts.append(S.text(x0 + bw + 4, by + bar_h - 0.3, num(v, unit),
                                 T.SIZE["value"], ink, T.WEIGHT["value"]))
     return S.canvas(W, H, "\n".join(parts), title, subtitle, source)
