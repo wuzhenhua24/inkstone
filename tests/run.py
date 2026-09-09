@@ -13,11 +13,11 @@
   4.5 版心    13 张 × 5 档栏宽全部渲染并合规；图形区高度随栏宽增长
   4.7 字宽    东亚歧义宽度字符在中文串里按整字身算（「·」实测差 3.6 倍）
   5 确定性    跑两次字节相同（演示数据不许用随机数）
-  5.5 导出    PDF / PNG 真的产出且不是空白页
+  5.5 导出    PDF / PNG 真的产出、不是空白页；PNG 带 300dpi 分辨率块
   6 目录闭环  catalog 里每个编号都有渲染产物
   7 灰度等价  彩色版逐处用色的明度必须与 mono 版一致
 """
-import io, os, re, subprocess, sys, contextlib
+import io, os, re, struct, subprocess, sys, contextlib
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -399,6 +399,69 @@ else:
         bad(f"导出文件过小，可能是空白页：{', '.join(thin)}")
     else:
         ok(f"{len(svgs)} 张的 PDF 与 PNG 均已产出")
+
+    # 像素数对，不等于尺寸对。rsvg-convert 的 --dpi 只决定栅格化算出多少
+    # 像素，不往文件里写分辨率——缺了 pHYs 块，Word / InDesign / LaTeX
+    # 一律按 72dpi 解释，85mm 的图置入时变成 354mm。README 承诺的
+    # 「300dpi PNG，直接置入 Word」，全落在这 9 个字节上。
+    def png_dpi(raw):
+        """读 pHYs，返回 (dpi_x, dpi_y)；没有这块或单位不是米则返回 None。"""
+        i = 8
+        while i < len(raw):
+            ln = struct.unpack(">I", raw[i:i + 4])[0]
+            typ = raw[i + 4:i + 8]
+            if typ == b"pHYs":
+                x, y, unit = struct.unpack(">IIB", raw[i + 8:i + 17])
+                return (x * 0.0254, y * 0.0254) if unit == 1 else None
+            if typ == b"IDAT":       # pHYs 若在 IDAT 之后，解码器不认，等同于没有
+                return None
+            i += 12 + ln
+        return None
+
+    def dpi_fails(raw, pt_w):
+        """这张 PNG 在「300dpi 1:1 落纸」上的问题清单。空列表表示合格。"""
+        out = []
+        d = png_dpi(raw)
+        if d is None:
+            out.append("不带 pHYs 分辨率块，置入时会被按 72dpi 解释（放大 4.17 倍）")
+        elif abs(d[0] - 300) > 0.5 or abs(d[1] - 300) > 0.5:
+            out.append(f"pHYs 写的是 {d[0]:.1f}×{d[1]:.1f}dpi，不是 300")
+        px_w = struct.unpack(">I", raw[16:20])[0]
+        want = round(pt_w / 72 * 300)
+        if abs(px_w - want) > 1:
+            out.append(f"宽 {px_w}px，而版心 {pt_w:.1f}pt @300dpi 应为 {want}px")
+        return out
+
+    dpi_bad, sample = [], None
+    for name in svgs:
+        stem = name[:-4]
+        path = os.path.join("out", f"{stem}.png")
+        if not os.path.exists(path):
+            continue
+        head = open(os.path.join("out", name), encoding="utf-8").read(400)
+        pt_w = float(re.search(r'width="([\d.]+)pt"', head).group(1))
+        raw = open(path, "rb").read()
+        if sample is None:
+            sample = (raw, pt_w)
+        for m in dpi_fails(raw, pt_w):
+            dpi_bad.append(f"{stem}.png {m}")
+    for m in dpi_bad[:5]:
+        bad(m)
+    # 反例：把 pHYs 抠掉，这组检查必须当场抓住。缺了这条，检查跟着
+    # render.py 一起漂掉都没人会发现——像素数照样是对的，肉眼没有区别，
+    # 只有把图拖进 Word 的那个人会知道。
+    if sample and not dpi_bad:
+        raw, pt_w = sample
+        i, stripped = 8, [raw[:8]]
+        while i < len(raw):
+            ln = struct.unpack(">I", raw[i:i + 4])[0]
+            if raw[i + 4:i + 8] != b"pHYs":
+                stripped.append(raw[i:i + 12 + ln])
+            i += 12 + ln
+        if not dpi_fails(b"".join(stripped), pt_w):
+            bad("抠掉 pHYs 也没被抓住——PNG 分辨率检查失效了，这组测试没有牙齿")
+        else:
+            ok(f"{len(svgs)} 张 PNG 均带 300dpi 分辨率块，像素数与版心宽度对得上")
 
 # 6 · 目录闭环 ─────────────────────────────────────────────────
 group("目录闭环")
