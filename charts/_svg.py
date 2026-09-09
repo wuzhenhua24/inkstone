@@ -43,6 +43,16 @@ def text_width(s: str, size_pt: float) -> float:
     return em * size_pt
 
 
+def widest(strings, size_pt: float) -> float:
+    """一组标签里实测最宽的那个的宽度（pt）。
+
+    抽稀、留装订线、判装得下，一律走这里，不许写 max(labels, key=len)。
+    字符数和宽度在中西混排下会给出不同的赢家：["周一","W10"] 里
+    "W10" 字符多，"周一" 却宽 0.75pt——按字符数留位就是留不够。
+    """
+    return max((text_width(s, size_pt) for s in strings), default=0.0)
+
+
 def has_cjk(s: str) -> bool:
     return any(unicodedata.east_asian_width(c) in ("W", "F") for c in s)
 
@@ -112,8 +122,12 @@ def wrap(s, max_w, size_pt, sep=" · "):
 
 
 # ── 元素 ──────────────────────────────────────────────────────
+# 随色板走的取值（INK / RULE）一律用 None 哨兵，在函数体里取，
+# 不写进默认参数——默认参数在 def 时求值一次，切了色板也不会变，
+# 于是彩色图里会混进 mono 的灰。这和 tokens._derive() 的注释是同一条
+# 规矩：派生色不许在模块层面留副本。字号和线宽不随色板走，留在签名里。
 
-def text(x, y, s, size=T.SIZE["label"], fill=T.INK, weight=None,
+def text(x, y, s, size=T.SIZE["label"], fill=None, weight=None,
          anchor="start", family=None, spacing=None, baseline=None,
          on=None, on_box=None):
     """on: 这段文字坐在什么底色上（深色格里的数字要翻成纸白）。
@@ -123,6 +137,7 @@ def text(x, y, s, size=T.SIZE["label"], fill=T.INK, weight=None,
     确认底色真的盖住了整段文字——白字有一半飘到白纸上，在灰度审阅时
     几乎看不出来，只能靠机器判。
     """
+    fill = T.INK if fill is None else fill
     size = max(size, min_size_for(str(s)))   # 字号地板在这里强制，调用处想违反也违反不了
     a = [f'x="{T.px(x)}"', f'y="{T.px(y)}"', f'font-size="{T.px(size)}"',
          f'fill="{fill}"', f'font-family="{family or T.FONT_SANS}"']
@@ -137,25 +152,29 @@ def text(x, y, s, size=T.SIZE["label"], fill=T.INK, weight=None,
     return f'<text {" ".join(a)}>{escape(str(s))}</text>'
 
 
-def rect(x, y, w, h, fill=T.INK, rx=0, opacity=None):
+def rect(x, y, w, h, fill=None, rx=0, opacity=None):
+    fill = T.INK if fill is None else fill
     o = f' fill-opacity="{opacity}"' if opacity is not None else ""
     r = f' rx="{rx}"' if rx else ""
     return (f'<rect x="{T.px(x)}" y="{T.px(y)}" width="{T.px(max(w,0))}" '
             f'height="{T.px(max(h,0))}" fill="{fill}"{r}{o}/>')
 
 
-def line(x1, y1, x2, y2, stroke=T.RULE, width=T.STROKE["rule"], dash=None):
+def line(x1, y1, x2, y2, stroke=None, width=T.STROKE["rule"], dash=None):
+    stroke = T.RULE if stroke is None else stroke
     d = f' stroke-dasharray="{dash}"' if dash else ""
     return (f'<line x1="{T.px(x1)}" y1="{T.px(y1)}" x2="{T.px(x2)}" y2="{T.px(y2)}" '
             f'stroke="{stroke}" stroke-width="{T.px(width)}"{d}/>')
 
 
-def path(d, stroke=T.INK, width=T.STROKE["data"], fill="none", cap="butt"):
+def path(d, stroke=None, width=T.STROKE["data"], fill="none", cap="butt"):
+    stroke = T.INK if stroke is None else stroke
     return (f'<path d="{d}" fill="{fill}" stroke="{stroke}" '
             f'stroke-width="{T.px(width)}" stroke-linecap="{cap}"/>')
 
 
-def circle(cx, cy, r, fill=T.INK, opacity=None):
+def circle(cx, cy, r, fill=None, opacity=None):
+    fill = T.INK if fill is None else fill
     o = f' fill-opacity="{opacity}"' if opacity is not None else ""
     return f'<circle cx="{T.px(cx)}" cy="{T.px(cy)}" r="{T.px(r)}" fill="{fill}"{o}/>'
 

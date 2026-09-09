@@ -5,7 +5,7 @@ import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tokens as T
 from charts import _svg as S
-from charts._data import fmt
+from charts._data import fmt, require, require_nonneg
 
 
 # ════ R3 点阵瀑布 ════
@@ -15,6 +15,9 @@ from charts._data import fmt
 def dot_cascade(data, title=None, subtitle=None, source=None,
                 column="single", per_dot=None, unit="", max_rows=3, group=10):
     """data: [(类目, 整数量), ...]。per_dot 不传则自动定「一个点 = 几」。"""
+    require(data, "R3 点阵瀑布")
+    require_nonneg(data, "R3 点阵瀑布")
+
     W = T.COLUMN[column]
     x0, x1 = T.PAD["left"], W - T.PAD["right"]
     inner = x1 - x0

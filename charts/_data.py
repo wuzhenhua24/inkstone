@@ -8,6 +8,37 @@
 import math
 
 
+# ─────────────────────────────────────────────────────────────
+# 入参守卫。七道类目上限都会给出改图建议，空数据和负值没理由待遇更差：
+# 裸 max() 抛的「max() arg is an empty sequence」对用户毫无意义，
+# 而负值在长度编码的图里会被 max(w,0) 悄悄吞成零长条——那是错图不是报错。
+# ─────────────────────────────────────────────────────────────
+
+def require(rows, code, what="数据"):
+    """空输入当场拒绝。空图不是图，静默画出一张空白版心更糟。"""
+    if not rows:
+        raise ValueError(f"{code} 收到空{what}，画不出图。至少给一项。")
+    return rows
+
+
+def require_nonneg(pairs, code, alt="R2 分岔条"):
+    """长度 / 个数 / 面积 ∝ 数值的图不接受负值。
+
+    pairs: [(名字, 数值), ...]。这类图的几何是从零点单向长出来的，
+    负值没有对应的画法：条会被 max(w,0) 吞成零长，跟在条端的数值
+    则跑到纸外；百格方阵更狠，负值会让格数变成 165。
+    与其画一张撒谎的图，不如指回真正承载正负的图型。
+    """
+    neg = [(n, v) for n, v in pairs if v < 0]
+    if neg:
+        shown = "、".join(f"{n}={v:,g}" for n, v in neg[:3])
+        more = f" 等 {len(neg)} 项" if len(neg) > 3 else ""
+        raise ValueError(
+            f"{code} 是从零点单向长出来的图，不接受负值：{shown}{more}。"
+            f"长度不可能 ∝ 负数——改用 {alt}。")
+    return pairs
+
+
 def rnd(i, k=0):
     """确定性伪随机 [0, 1)。同 (i, k) 永远返回同一个值。"""
     x = math.sin(i * 127.1 + k * 311.7) * 43758.5453
@@ -95,10 +126,17 @@ def linreg(xs, ys):
 def histogram(xs, bins=None):
     """等宽分箱。箱边取人读得懂的整数，不是 min/max 直接均分——
     「12.37–19.84」这种箱标签没人愿意读。返回 (箱边, 各箱计数)。"""
+    require(xs, "D1 阶梯直方", "样本")
     lo, hi = min(xs), max(xs)
     if bins is None:
         bins = max(5, min(14, int(len(xs) ** 0.5)))
     edges = nice_ticks(lo, hi, bins)
+    # 全等值（含单点样本）时 nice_ticks 只给得出一个边，切不出箱。
+    # 这是合法输入——「所有人耗时都是 5 分钟」是一条真实的分布——
+    # 所以给一个量级相称的单箱，而不是让 counts[k] 抛 IndexError。
+    if len(edges) < 2:
+        half = abs(lo) * 0.05 or 0.5
+        return [lo - half, lo + half], [len(xs)]
     counts = [0] * (len(edges) - 1)
     for v in xs:
         k = 0

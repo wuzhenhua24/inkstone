@@ -5,7 +5,7 @@ import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tokens as T
 from charts import _svg as S
-from charts._data import nice_ticks, decimals_for, fmt
+from charts._data import nice_ticks, decimals_for, fmt, require, require_nonneg
 
 MAX_PANELS = 12
 
@@ -21,6 +21,12 @@ def small_multiples(panels, x_labels, title=None, subtitle=None, source=None,
         raise ValueError(
             f"S3 小倍数网格最多 {MAX_PANELS} 格，收到 {len(panels)} 格。"
             f"再多每格放不下中文名——拆成多张图。")
+
+    require(panels, "S3 小倍数网格", "格")
+    for nm, vs in panels:
+        require(vs, "S3 小倍数网格", f"「{nm}」格的读数")
+    require_nonneg([(nm, v) for nm, vs in panels for v in vs],
+                   "S3 小倍数网格", "S2 细线族并关掉零起点")
 
     W = T.COLUMN[column]
     x0, x1 = T.PAD["left"], W - T.PAD["right"]
@@ -66,7 +72,8 @@ def small_multiples(panels, x_labels, title=None, subtitle=None, source=None,
     pw = panel_w(cols)
     if pw < min_pw:
         raise ValueError(
-            f"每格只有 {pw:.1f}pt，放不下「{max(panels, key=lambda p: len(p[0]))[0]}」"
+            f"每格只有 {pw:.1f}pt，放不下「"
+            f"{max(panels, key=lambda p: S.text_width(p[0], T.SIZE['label']))[0]}」"
             f"加末值（需 {min_pw:.1f}pt）。减少列数、换双栏，或缩短名称。")
 
     rows = -(-npanel // cols)

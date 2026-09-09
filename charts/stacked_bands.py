@@ -5,7 +5,7 @@ import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tokens as T
 from charts import _svg as S
-from charts._data import nice_ticks, decimals_for, fmt
+from charts._data import nice_ticks, decimals_for, fmt, require, require_nonneg
 from charts.line_family import _place_labels
 
 MAX_LAYERS = 5
@@ -22,6 +22,18 @@ def stacked_bands(layers, x_labels, title=None, subtitle=None, source=None,
         raise ValueError(
             f"C2 堆叠带最多 {MAX_LAYERS} 层，收到 {len(layers)} 层。"
             f"再多带会薄到放不下名字，且灰阶排不开——合并小项或改用 C1。")
+
+    require(layers, "C2 堆叠带", "层")
+    require(x_labels, "C2 堆叠带", "时间刻度")
+    for nm, vs in layers:
+        if len(vs) != len(x_labels):
+            raise ValueError(
+                f"C2 堆叠带的「{nm}」层有 {len(vs)} 个读数，"
+                f"时间刻度却有 {len(x_labels)} 个——两者必须等长。")
+    # 堆叠的前提是各层同号：混入负层，带的上沿会低于下沿，多边形自交，
+    # 印出来是一团看不出构成的墨。
+    require_nonneg([(nm, v) for nm, vs in layers for v in vs],
+                   "C2 堆叠带", "R2 分岔条或 S2 细线族")
 
     W = T.COLUMN[column]
     x0, x1 = T.PAD["left"], W - T.PAD["right"]
@@ -118,8 +130,8 @@ def stacked_bands(layers, x_labels, title=None, subtitle=None, source=None,
 
     parts.append(S.line(px0, base, px1, base, T.GRAY[3], T.STROKE["rule"]))
     step = 1
-    while n / step > 1 and (px1 - px0) / (n / step) < S.text_width(
-            max(x_labels, key=len), T.SIZE["label"]) + 6:
+    xl_w = S.widest(x_labels, T.SIZE["label"])   # 实测最宽，不是字符最多
+    while n / step > 1 and (px1 - px0) / (n / step) < xl_w + 6:
         step += 1
     for i, xl in enumerate(x_labels):
         if i % step == 0:

@@ -5,7 +5,7 @@ import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tokens as T
 from charts import _svg as S
-from charts._data import decimals_for
+from charts._data import decimals_for, require, require_nonneg
 
 MAX_CATS = 6
 
@@ -21,6 +21,11 @@ def hundred_grid(data, title=None, subtitle=None, source=None,
         raise ValueError(
             f"C1 百格方阵最多 {MAX_CATS} 类，收到 {len(data)} 类。"
             f"灰阶只能可靠区分 6 档，再多印出来分不开——改用 R1 定序条。")
+
+    require(data, "C1 百格方阵")
+    # 负值会让「最大余额法」分出 165 格——一张号称百格的图画出 165 格，
+    # 是这张图最容易被读者当场抓到的硬伤。
+    require_nonneg(data, "C1 百格方阵")
 
     W = T.COLUMN[column]
     x0, x1 = T.PAD["left"], W - T.PAD["right"]

@@ -5,7 +5,7 @@ import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tokens as T
 from charts import _svg as S
-from charts._data import nice_ticks
+from charts._data import nice_ticks, require
 
 MAX_SERIES = 6
 
@@ -41,6 +41,16 @@ def line_family(series, x_labels, title=None, subtitle=None, source=None,
         raise ValueError(
             f"S2 细线族最多 {MAX_SERIES} 条，收到 {len(series)} 条。"
             f"再多线会互相穿插，灰阶和线宽都排不开——改用 S3 小倍数网格。")
+
+    require(series, "S2 细线族", "序列")
+    for nm, vs in series:
+        require(vs, "S2 细线族", f"序列「{nm}」的读数")
+    # y_from_zero 把标度域钉在 0，负值会画到轴线以下——标度在撒谎。
+    # 有负值就必须让调用方明确关掉零起点，而不是替他选一个错的域。
+    if y_from_zero and any(v < 0 for _, vs in series for v in vs):
+        raise ValueError(
+            "S2 细线族收到负值，但 y_from_zero=True 会把标度域钉在 0，"
+            "负值段将画到轴线以下。传 y_from_zero=False 让域包住负值。")
 
     W = T.COLUMN[column]
     x0, x1 = T.PAD["left"], W - T.PAD["right"]
@@ -104,8 +114,8 @@ def line_family(series, x_labels, title=None, subtitle=None, source=None,
     # x 轴：标签太密就隔点抽稀，绝不缩字号
     parts.append(S.line(px0, base, px1, base, T.GRAY[3], T.STROKE["rule"]))
     step = 1
-    while n / step > 1 and (px1 - px0) / (n / step) < S.text_width(
-            max(x_labels, key=len), T.SIZE["label"]) + 6:
+    xl_w = S.widest(x_labels, T.SIZE["label"])   # 实测最宽，不是字符最多
+    while n / step > 1 and (px1 - px0) / (n / step) < xl_w + 6:
         step += 1
     for i, xl in enumerate(x_labels):
         if i % step:

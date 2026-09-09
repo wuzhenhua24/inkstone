@@ -5,6 +5,7 @@ import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tokens as T
 from charts import _svg as S
+from charts._data import require
 
 MAX_CELLS = 100
 
@@ -16,6 +17,15 @@ MAX_CELLS = 100
 def matrix_heat(rows, cols, values, title=None, subtitle=None, source=None,
                 column="double", unit="", show_values=True):
     """rows / cols: 中文维度名列表；values: values[行][列] 的二维数值。"""
+    require(rows, "M1 矩阵热力", "行维度")
+    require(cols, "M1 矩阵热力", "列维度")
+    bad = [i for i, row in enumerate(values) if len(row) != len(cols)]
+    if len(values) != len(rows) or bad:
+        raise ValueError(
+            f"M1 矩阵热力的 values 必须是 {len(rows)}×{len(cols)} 的二维表，"
+            f"收到 {len(values)} 行"
+            + (f"，其中第 {bad[0]} 行有 {len(values[bad[0]])} 列" if bad else "") + "。")
+
     n = len(rows) * len(cols)
     if n > MAX_CELLS:
         raise ValueError(

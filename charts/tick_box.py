@@ -5,7 +5,7 @@ import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tokens as T
 from charts import _svg as S
-from charts._data import five_number, nice_ticks
+from charts._data import five_number, nice_ticks, require
 
 MAX_GROUPS = 8
 
@@ -21,6 +21,10 @@ def tick_box(groups, title=None, subtitle=None, source=None,
         raise ValueError(
             f"D3 五数摘要最多 {MAX_GROUPS} 组，收到 {len(groups)} 组。"
             f"再多每组只剩几毫米，箱体和须线分不开——拆图。")
+
+    require(groups, "D3 五数摘要", "组")
+    for nm, vs in groups:
+        require(vs, "D3 五数摘要", f"「{nm}」组的读数")
 
     W = T.COLUMN[column]
     x0, x1 = T.PAD["left"], W - T.PAD["right"]

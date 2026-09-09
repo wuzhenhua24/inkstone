@@ -6,7 +6,7 @@ from datetime import date
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tokens as T
 from charts import _svg as S
-from charts._data import median
+from charts._data import median, require, require_nonneg
 
 
 # ════ S1 日序条码 ════
@@ -17,6 +17,9 @@ def day_series(data, title=None, subtitle=None, source=None,
                column="double", unit="", annotate_top=2, show_median=True,
                annotate_ratio=1.25):
     """data: [(datetime.date, 数值), ...] 按时间升序。"""
+    require(data, "S1 日序条码", "序列")
+    require_nonneg([(str(d), v) for d, v in data], "S1 日序条码")
+
     W = T.COLUMN[column]
     x0, x1 = T.PAD["left"], W - T.PAD["right"]
     inner = x1 - x0

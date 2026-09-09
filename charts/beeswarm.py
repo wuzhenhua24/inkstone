@@ -5,7 +5,7 @@ import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tokens as T
 from charts import _svg as S
-from charts._data import median, nice_ticks
+from charts._data import median, nice_ticks, require
 
 MAX_GROUPS = 6
 
@@ -48,6 +48,10 @@ def beeswarm(groups, title=None, subtitle=None, source=None,
         raise ValueError(
             f"D2 蜂群最多 {MAX_GROUPS} 组，收到 {len(groups)} 组。"
             f"再多每组只剩几毫米高，点会糊成一条线——拆成多张图。")
+
+    require(groups, "D2 蜂群", "组")
+    for nm, vs in groups:
+        require(vs, "D2 蜂群", f"「{nm}」组的读数")
 
     W = T.COLUMN[column]
     x0, x1 = T.PAD["left"], W - T.PAD["right"]

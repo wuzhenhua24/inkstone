@@ -4,6 +4,7 @@ import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tokens as T
 from charts import _svg as S
+from charts._data import require, require_nonneg
 
 
 # ════ R1 定序条 ════
@@ -13,6 +14,9 @@ from charts import _svg as S
 def rank_bars(data, title=None, subtitle=None, source=None,
               column="single", unit="", show_value=True):
     """data: [(类目, 数值), ...]，按传入顺序绘制（调用方负责排序）。"""
+    require(data, "R1 定序条")
+    require_nonneg(data, "R1 定序条")
+
     W = T.COLUMN[column]
     x0, x1 = T.PAD["left"], W - T.PAD["right"]
 

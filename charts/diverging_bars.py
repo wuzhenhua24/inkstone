@@ -5,6 +5,7 @@ import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tokens as T
 from charts import _svg as S
+from charts._data import require
 from charts._data import decimals_for, fmt
 
 
@@ -17,6 +18,8 @@ def diverging_bars(data, title=None, subtitle=None, source=None,
     """data: [(类目, 数值), ...]，数值可正可负。"""
     if sort:
         data = sorted(data, key=lambda kv: -kv[1])
+    require(data, "R2 分岔条")
+
     W = T.COLUMN[column]
     x0, x1 = T.PAD["left"], W - T.PAD["right"]
 

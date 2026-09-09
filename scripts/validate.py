@@ -111,17 +111,21 @@ def check(path):
             fails.append(f"文字对比度 {contrast(fill, ground):.1f}:1 < 4.5（底色 {ground}）："
                          f"{fill} {s[:14]!r}")
 
-    # 6 · 相邻数据色必须在灰度上分得开（≥10 L*，感知均匀尺度）
+    # 6 · 数据色必须两两在灰度上分得开（≥10 L*，感知均匀尺度）
+    #     必须两两全比，不能只比在文档里前后相邻的两个：同样三个颜色，
+    #     中间夹一个别的颜色，「相邻」就换了对象，结论跟着翻——那是运气不是判定。
+    #     差 0 也要报：两个不同色值落在同一明度上，影印后就是同一个灰。
     fills = []
     for el in root.iter():
         f = el.get("fill")
-        if f and f.startswith("#") and f.upper() not in ("#FFFFFF",) and el.tag != f"{NS}text":
-            if f not in fills:
-                fills.append(f)
-    for i in range(len(fills) - 1):
-        d = abs(lstar(fills[i]) - lstar(fills[i + 1]))
-        if 0 < d < 10:
-            fails.append(f"灰度过近：{fills[i]} vs {fills[i+1]}（差 {d:.1f} L* < 10）")
+        if f and f.startswith("#") and f.upper() != "#FFFFFF" and el.tag != f"{NS}text":
+            if f.upper() not in fills:      # 按大写去重，免得 #1f1f1f 和 #1F1F1F 自己跟自己比
+                fills.append(f.upper())
+    for i in range(len(fills)):
+        for j in range(i + 1, len(fills)):
+            d = abs(lstar(fills[i]) - lstar(fills[j]))
+            if d < 10:
+                fails.append(f"灰度过近：{fills[i]} vs {fills[j]}（差 {d:.1f} L* < 10）")
 
     # 7 · 印刷产物里不该有的东西
     if root.iter(f"{NS}image").__next__() if False else re.search(r"<image\b", src):
@@ -140,6 +144,36 @@ def check(path):
             fails.append(f"文字用了填充档色 {f}——纸上的文字只许 {pname} 色板的 "
                          f"0..{T.TEXT_SAFE_MAX} 级")
             break
+
+    # 10 · 同一基线上的文字不得互相压字。
+    #      x 轴标签抽稀、线端标签避让、峰值标注防重叠——这些逻辑都在图型
+    #      内部，出了错没人看得见。尤其是按字符数估宽的抽稀：中西混排下
+    #      「W10」字符最多而「周一」最宽，按字符数留位就是留不够，
+    #      标签当场叠在一起。这条把那类错误从「目视」挪到机器判。
+    lines = []
+    for el in root.iter(f"{NS}text"):
+        st = "".join(el.itertext())
+        size = float(el.get("font-size", "0"))
+        tx, ty = float(el.get("x", "0")), float(el.get("y", "0"))
+        tw = S.text_width(st, size)
+        anchor_ = el.get("text-anchor", "start")
+        left = tx - tw if anchor_ == "end" else (tx - tw / 2 if anchor_ == "middle" else tx)
+        lines.append((ty, left, left + tw, st))
+    hits = 0
+    for i in range(len(lines)):
+        for j in range(i + 1, len(lines)):
+            yi, li, ri, si_ = lines[i]
+            yj, lj, rj, sj_ = lines[j]
+            if abs(yi - yj) > 1.0:        # 只比同一基线，错行的重叠是正常排布
+                continue
+            ov = min(ri, rj) - max(li, lj)
+            if ov > 0.5:
+                hits += 1
+                if hits <= 3:             # 一撞往往连撞一片，报前三处足够定位
+                    fails.append(f"同基线文字压字 {ov:.1f}pt @y={yi:.1f}："
+                                 f"{si_[:12]!r} 与 {sj_[:12]!r}")
+    if hits > 3:
+        fails.append(f"……同基线压字共 {hits} 处（只列前 3 处）")
 
     # 8 · 字体栈必须中西分家（拉丁在前、CJK 在后，靠逐字符 fallback）
     for el in root.iter(f"{NS}text"):

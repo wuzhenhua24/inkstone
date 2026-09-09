@@ -6,6 +6,10 @@
   2 校验      产物 / token / 目录全部合规
   3 反例      校验器仍然抓得住违规，条数不少于预期
   4 越界      每张有上限的图型都会拒绝超限数据
+  4.1 负值    长度编码的图会拒绝负值，而不是画出零长条
+  4.2 退化    空数据一律友好拒绝；全等值样本仍要画得出来
+  4.3 留位    标签抽稀按实测宽度，退回字符数估宽必须被抓住
+  4.4 色板    切色板后原语默认参数必须跟着走，不许漏出 mono 灰
   5 确定性    跑两次字节相同（演示数据不许用随机数）
   5.5 导出    PDF / PNG 真的产出且不是空白页
   6 目录闭环  catalog 里每个编号都有渲染产物
@@ -18,6 +22,8 @@ sys.path.insert(0, ROOT)
 os.chdir(ROOT)
 
 import tests.badcase as badcase
+import tokens as T
+from charts import _svg
 from scripts.validate import check, check_tokens, check_catalog
 
 fails = []
@@ -115,6 +121,142 @@ for label, fn, args in GUARDS:
         pass
 if not leaked:
     ok(f"{len(GUARDS)} 道上限全部生效")
+
+# 4.1 · 负值防护 ───────────────────────────────────────────────
+# 长度 / 个数 / 面积 ∝ 数值的图收到负值时，几何没有对应的画法：
+# 条被 max(w,0) 吞成零长、跟在条端的数值跑到纸外、百格方阵分出 165 格。
+# 画一张撒谎的图比报错糟得多，所以这些必须当场拒绝。
+group("负值防护")
+from charts.rank_bars import rank_bars
+from charts.diverging_bars import diverging_bars
+from charts.dot_cascade import dot_cascade
+from charts.day_series import day_series
+from charts.scatter_fit import scatter_fit
+from charts.step_histogram import step_histogram
+from datetime import date, timedelta
+
+_d0 = date(2026, 4, 1)
+NEG = [
+    ("R1 负值", rank_bars,       ([("甲", 5), ("乙", -3)],)),
+    ("R3 负值", dot_cascade,     ([("甲", 5), ("乙", -3)],)),
+    ("C1 负值", hundred_grid,    ([("甲", 50), ("乙", -20)],)),
+    ("S1 负值", day_series,      ([(_d0 + timedelta(days=i), -1 if i == 5 else 100)
+                                  for i in range(70)],)),
+    ("S3 负值", small_multiples, ([("甲", [1, -2])], ["a", "b"])),
+    ("C2 负值", stacked_bands,   ([("甲", [5, 4]), ("乙", [-3, 2])], ["1月", "2月"])),
+    ("S2 负值+零起点", line_family, ([("甲", [1, -2])], ["a", "b"])),
+]
+leaked = 0
+for label, fn, args in NEG:
+    try:
+        fn(*args, title="负值")
+        bad(f"{label} 未被拦下——画出了一张长度不 ∝ 数值的图")
+        leaked += 1
+    except ValueError:
+        pass
+# R2 分岔条的职责就是承载正负，它必须照画不误
+try:
+    diverging_bars([("甲", 5), ("乙", -3)], title="正负")
+except ValueError as e:
+    bad(f"R2 分岔条被误拦：{e}")
+    leaked += 1
+if not leaked:
+    ok(f"{len(NEG)} 张拒绝负值，R2 分岔条照画不误")
+
+# 4.2 · 退化输入 ───────────────────────────────────────────────
+# 空数据抛裸的「max() arg is an empty sequence」对用户毫无意义；
+# 七道类目上限都给了改图建议，空数据没理由待遇更差。
+group("退化输入")
+EMPTY = [
+    ("R1", rank_bars, ([],)),               ("R2", diverging_bars, ([],)),
+    ("R3", dot_cascade, ([],)),             ("S1", day_series, ([],)),
+    ("S2", line_family, ([], [])),          ("S2 空序列", line_family, ([("甲", [])], [])),
+    ("S3", small_multiples, ([], [])),      ("C1", hundred_grid, ([],)),
+    ("C2", stacked_bands, ([], [])),        ("D1", step_histogram, ([],)),
+    ("D2", beeswarm, ([],)),                ("D2 空组", beeswarm, ([("甲", [])],)),
+    ("D3", tick_box, ([],)),                ("D3 空组", tick_box, ([("甲", [])],)),
+    ("M1", matrix_heat, ([], [], [])),      ("M2", scatter_fit, ([],)),
+]
+raw = 0
+for label, fn, args in EMPTY:
+    try:
+        fn(*args, title="空")
+        bad(f"{label} 空数据被静默画出来了——空图不是图")
+        raw += 1
+    except ValueError as e:
+        if "empty sequence" in str(e):
+            bad(f"{label} 空数据抛的还是裸 max()/min()：{e}")
+            raw += 1
+    except Exception as e:
+        bad(f"{label} 空数据抛了 {type(e).__name__}，应当是带解释的 ValueError")
+        raw += 1
+# 反过来：全等值样本是合法分布（「所有人耗时都是 5 分钟」），必须画得出来
+for label, vals in (("全等值", [5.0] * 40), ("单点", [5.0]), ("全零", [0.0] * 12)):
+    try:
+        step_histogram(vals, title="退化", subtitle="单箱", source="来源")
+    except Exception as e:
+        bad(f"D1 {label} 样本画不出来：{type(e).__name__}: {e}")
+        raw += 1
+if not raw:
+    ok(f"{len(EMPTY)} 处空输入全部友好拒绝，D1 三种退化样本仍能出图")
+
+# 4.3 · 标签留位 ───────────────────────────────────────────────
+# 抽稀留位必须按实测宽度。中西混排下「till」字符最多而「环比增速」最宽，
+# 按字符数留位欠 21pt，标签当场叠在一起。这一组同时验证两件事：
+# 现在不叠，以及退回旧写法会被校验器第 10 条抓住（否则测试没有牙齿）。
+group("标签留位")
+_LAB = ["Q1", "Q2", "Q3", "Q4", "till", "环比增速", "同比增速",
+        "Q1", "Q2", "till", "环比增速", "Q4"]
+_SER = [("甲", [i + 3 for i in range(12)]), ("乙", [14 - i for i in range(12)])]
+_kw = dict(title="中西混排刻度", subtitle="副题", source="来源", column="single")
+
+
+def _overlaps(svg):
+    tmp = os.path.join("out", "_labelfit.svg")
+    with open(tmp, "w", encoding="utf-8") as fh:
+        fh.write(svg)
+    hits = [h for h in check(tmp) if "压字" in h]
+    os.remove(tmp)
+    return hits
+
+
+now = _overlaps(line_family(_SER, _LAB, **_kw))
+_orig_widest = _svg.widest
+_svg.widest = lambda ss, z: _svg.text_width(max(ss, key=len), z)   # 退回字符数估宽
+try:
+    regressed = _overlaps(line_family(_SER, _LAB, **_kw))
+finally:
+    _svg.widest = _orig_widest
+if now:
+    bad(f"实测留位下仍有压字：{now}")
+elif not regressed:
+    bad("退回字符数估宽也没被抓住——校验器第 10 条失效了，这组测试没有牙齿")
+else:
+    ok(f"实测留位无压字；退回字符数估宽被抓到 {len(regressed)} 条")
+
+# 4.4 · 色板穿透 ───────────────────────────────────────────────
+# _svg 原语的颜色默认参数若写进函数签名，会在 def 时求值一次并永久冻结，
+# 切了色板也不会变——彩色图里于是混进 mono 的灰。灰度等价测试看不见它：
+# mono 灰在彩色图里 L* 完全正确，错的只是色相。
+group("色板穿透")
+import palettes as _pal
+stale = []
+for _name in _pal.PRESETS:
+    if _name == "mono":
+        continue
+    with T.use(_name):
+        ramp = {c.upper() for c in T.GRAY}
+        emitted = {"text": _svg.text(0, 0, "甲"), "rect": _svg.rect(0, 0, 10, 10),
+                   "line": _svg.line(0, 0, 10, 10), "path": _svg.path("M0 0"),
+                   "circle": _svg.circle(0, 0, 2)}
+        for prim, out in emitted.items():
+            for hexv in re.findall(r'(?:fill|stroke)="(#[0-9A-Fa-f]{6})"', out):
+                if hexv.upper() != "#FFFFFF" and hexv.upper() not in ramp:
+                    stale.append(f"{_name}/{prim} 默认参数漏出 {hexv}（不在该色板阶梯内）")
+for m in stale:
+    bad(m)
+if not stale:
+    ok(f"{len(_pal.PRESETS) - 1} 套色板 × 5 个原语，默认参数全部跟着色板走")
 
 # 5 · 确定性 ───────────────────────────────────────────────────
 group("确定性")

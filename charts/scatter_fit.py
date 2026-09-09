@@ -5,7 +5,7 @@ import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tokens as T
 from charts import _svg as S
-from charts._data import linreg, nice_ticks, fmt, decimals_for
+from charts._data import linreg, nice_ticks, fmt, decimals_for, require
 
 
 # ════ M2 散点带回归 ════
@@ -16,6 +16,7 @@ def scatter_fit(points, title=None, subtitle=None, source=None,
                 column="single", x_unit="", y_unit="", x_name="", y_name="",
                 fit=True, min_n_for_fit=20):
     """points: [(x, y), ...]"""
+    require(points, "M2 散点带回归", "点")
     xs = [p[0] for p in points]
     ys = [p[1] for p in points]
     W = T.COLUMN[column]
