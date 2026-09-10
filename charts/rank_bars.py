@@ -2,7 +2,7 @@
 """R1 定序条 · 少类目排名比较（≤10 项）"""
 import tokens as T
 from charts import _svg as S
-from charts._data import require, require_nonneg, num
+from charts._data import require, require_nonneg, num, decimals_for
 
 
 # ════ R1 定序条 ════
@@ -42,8 +42,12 @@ def rank_bars(data, title=None, subtitle=None, source=None,
     H = top + plot_h + T.GAP["plot_source"] + T.SIZE["source"] + 6
 
     vmax = max(v for _, v in data) or 1
-    # 数值跟在条端走，所以量程要给最长那条的数值留出位置，否则出血。
-    longest = max(S.text_width(num(v, unit), T.SIZE["value"]) for _, v in data)
+    # 一组数要对齐小数位。不统一的话，`num()` 默认给六位有效数字：
+    # 同一列里会并排出现「14.5094亿」和「3.40004亿」——读者会以为
+    # 两者精度不同，而它们只是量级不同。demo 里全是整数，碰不到这条；
+    # 真实数据（examples/ex1）一喂进来就露了。
+    decimals = decimals_for([v for _, v in data])
+    longest = max(S.text_width(num(v, unit, decimals), T.SIZE["value"]) for _, v in data)
     span = (x1 - x0) - longest - 5
 
     parts = [S.line(x0, top - 2, x0, top + plot_h, T.GRAY[4], T.STROKE["rule"])]  # 零点基线
@@ -62,6 +66,6 @@ def rank_bars(data, title=None, subtitle=None, source=None,
         parts.append(S.rect(x0, by, bw, bar_h, ink))
         if show_value:
             # 数值贴条端，和条一体；不右对齐到栏边，省掉一次视线长途跋涉。
-            parts.append(S.text(x0 + bw + 4, by + bar_h - 0.3, num(v, unit),
+            parts.append(S.text(x0 + bw + 4, by + bar_h - 0.3, num(v, unit, decimals),
                                 T.SIZE["value"], ink, T.WEIGHT["value"]))
     return S.canvas(W, H, "\n".join(parts), title, subtitle, source)

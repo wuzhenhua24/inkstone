@@ -66,8 +66,16 @@ if os.path.isdir("out"):
     shutil.rmtree("out")
 os.makedirs("out", exist_ok=True)
 
+# examples/ 一并渲染。它们不进这条流水线就会烂——真实数据的例子最容易
+# 因为一次改签名、一次改 token 而悄悄失效，而它们恰恰是外人第一眼看的东西。
+# 进来之后，下游每一组（校验 / 确定性 / 导出）自动覆盖到它们。
+RENDER = ("demo.py", "demo_palettes.py",
+          os.path.join("examples", "ex1_population.py"),
+          os.path.join("examples", "ex2_life_expectancy.py"),
+          os.path.join("examples", "ex3_urbanization.py"))
+
 group("渲染")
-for script in ("demo.py", "demo_palettes.py"):
+for script in RENDER:
     r = subprocess.run([sys.executable, script], capture_output=True, text=True)
     if r.returncode:
         bad(f"{script} 失败：{r.stderr.strip()[:200]}")
@@ -202,6 +210,40 @@ except ValueError:
     pass
 if not blown:
     ok("R3 每点当量随量级无上限地走，显式传的装不下时当场拒绝")
+
+# 4.005 · 选型记录 ────────────────────────────────────────────
+# SKILL.md 第一节第 3 条：「在 catalog.md 里至少比较 3 个候选，写下淘汰理由。
+# 只记录『用了哪张』不算数——选择过程本身是交付物的一部分。」
+#
+# 这是全份文档里分量最重、却最没法执行的一条：它要求的是一段思考过程，
+# 而思考过程写没写，此前既没有产物也没有检查。examples/ 是它第一次有实物，
+# 那就顺手把它判起来——判不了「理由好不好」，但判得了「有没有、够不够三个」。
+# 一个采用、至少两个淘汰，且淘汰理由不能是空话（得给出替代图型或数据形状）。
+group("选型记录")
+_ex = sorted(f for f in os.listdir("examples")
+             if f.startswith("ex") and f.endswith(".py"))
+_thin = 0
+if not _ex:
+    bad("examples/ 下一个例子都没有——路线图上这一项还没兑现")
+    _thin += 1
+for _f in _ex:
+    _src = open(os.path.join("examples", _f), encoding="utf-8").read()
+    _doc = _src.split('"""')[1] if '"""' in _src else ""
+    _taken = _doc.count("← 采用")
+    _cut = _doc.count("—— 淘汰")
+    if "选型" not in _doc:
+        bad(f"examples/{_f} 的文档字符串里没有选型记录")
+        _thin += 1
+    elif _taken != 1 or _taken + _cut < 3:
+        bad(f"examples/{_f} 的选型记录不完整：{_taken} 个「← 采用」、"
+            f"{_cut} 个「—— 淘汰」，要求恰好 1 个采用且候选合计 ≥3")
+        _thin += 1
+    elif not re.search(r"数据形状|catalog|失效条件", _doc):
+        bad(f"examples/{_f} 的淘汰理由没有落到数据形状或 catalog 的失效条件上"
+            f"——那样的理由是空话，谁都可以事后编一个")
+        _thin += 1
+if not _thin:
+    ok(f"{len(_ex)} 个例子都写了选型过程：1 个采用 + ≥2 个带理由的淘汰")
 
 # 4.01 · 交付闸门 ─────────────────────────────────────────────
 # SKILL.md 第零节第 7 条把 `python3 scripts/validate.py out/*.svg` 的退出码
@@ -646,7 +688,7 @@ group("确定性")
 before = {n: open(os.path.join("out", n), "rb").read() for n in svgs}
 shutil.rmtree("out")
 os.makedirs("out", exist_ok=True)
-for script in ("demo.py", "demo_palettes.py"):
+for script in RENDER:
     subprocess.run([sys.executable, script], capture_output=True)
 again = sorted(f for f in os.listdir("out") if f.endswith(".svg") and not f.startswith("_"))
 if again != svgs:
