@@ -7,6 +7,7 @@
   3 反例      校验器仍然抓得住违规，条数不少于预期
   4 越界      每张有上限的图型都会拒绝超限数据
   4.01 闸门   validate.py 的退出码本身要对（不给参数必须失败）
+  4.015 外部  装成 skill 后从用户目录出图、校验、落盘全走得通
   4.02 盲区   定点突变，每处都要被对应的那条规则点名
   4.05 界内   恰好取到声明的上限那一档，必须画得出来且合规
   4.06 数值   数值永不排成科学计数法（:,g 在 |v| ≥ 1e6 时会）
@@ -294,7 +295,7 @@ if not _thin:
     ok(f"{len(_ex)} 个例子都写了选型过程：1 个采用 + ≥2 个带理由的淘汰")
 
 # 4.01 · 交付闸门 ─────────────────────────────────────────────
-# SKILL.md 第零节第 7 条把 `python3 scripts/validate.py out/*.svg` 的退出码
+# SKILL.md 第零节第 8 条把 `python3 scripts/validate.py out/*.svg` 的退出码
 # 当作交付闸门。那条命令在两种情况下会**空过**，而两种都正好是最该拦住的：
 #   · 一张图都没出：glob 匹配不到文件，shell 传进来零个参数，
 #     校验器照旧打印「0 个文件，0 项不合格」并退出 0；
@@ -323,6 +324,67 @@ if svgs[0] not in _r.stdout:
     _gate_bad += 1
 if not _gate_bad:
     ok(f"{len(GATE)} 种调用方式退出码都对，坏文件不会带走后面的检查")
+
+# 4.015 · 外部调用 ────────────────────────────────────────────
+# 这个项目的第一身份是 skill，装到 ~/.claude/skills/inkstone/ 之后，
+# **agent 的工作目录是用户的项目，不是 skill 目录**。此前 SKILL.md 里
+# 关于这件事一个字都没有（grep sys.path / skills / 工作目录 零命中），
+# 而第零节写的是 `python3 scripts/validate.py out/*.svg`、第一节写的是
+# 「打开 charts/ 里对应文件」——全是相对路径。照字面做，第一行就
+# ModuleNotFoundError：按设计方式装上，然后失灵。
+#
+# 所以这一组走真实路径：在仓库外建目录、cd 过去、只靠 sys.path 出图，
+# 再用绝对路径校验。文档里那段说明会不会漂，由这一组说了算。
+group("外部调用")
+import tempfile
+
+_ext = []
+with tempfile.TemporaryDirectory() as _td:
+    _script = os.path.join(_td, "go.py")
+    with open(_script, "w", encoding="utf-8") as fh:
+        fh.write(
+            "import sys; sys.path.insert(0, %r)\n"
+            "from charts.rank_bars import rank_bars\n"
+            "from scripts.render import render\n"
+            "svg = rank_bars([('华东', 128), ('华北', 96)], title='华东最高',\n"
+            "                subtitle='单位：万元', source='内部数据', unit='万元')\n"
+            "print(render(svg, 'mine', outdir='.')[0])\n" % ROOT)
+    _r = subprocess.run([sys.executable, "go.py"], cwd=_td,
+                        capture_output=True, text=True)
+    if _r.returncode:
+        _ext.append(f"仓库外照 SKILL.md 第 1 条出图失败：{_r.stderr.strip()[-160:]}")
+    else:
+        _made = os.path.join(_td, "mine.svg")   # 别叫 _svg：会遮住模块级的 charts._svg
+        if not os.path.exists(_made):
+            _ext.append("产物没落在用户目录里——outdir 被写回 skill 目录了？")
+        else:
+            _v = subprocess.run(
+                [sys.executable, os.path.join(ROOT, "scripts", "validate.py"), _made],
+                cwd=_td, capture_output=True, text=True)
+            if _v.returncode:
+                _ext.append(f"仓库外的产物没通过校验：{_v.stdout.strip()[-160:]}")
+            if "tokens.py" in _v.stdout:
+                _ext.append("校验仓库外的产物时仍在做 inkstone 自身体检——"
+                            "用户看自己的图，先看到三行与他无关的结论")
+
+# SKILL.md 必须把这条路径说清楚，否则代码能跑也没用——照文档做的人跑不通。
+_skill = open("SKILL.md", encoding="utf-8").read()
+if not re.search(r"sys\.path", _skill):
+    _ext.append("SKILL.md 没有一处说明 sys.path——装成 skill 后照字面做会 ModuleNotFoundError")
+
+# 路由面：description 里得有用户真会打的词。此前 188 字符里
+# 「画图」「柱状图」「折线图」一个都没有，而内置的通用绘图 skill
+# 首句就是「whenever you are about to create ANY chart」——泛化说法必赢路由。
+_desc = re.search(r"^description:\s*(.+)$", _skill, re.M).group(1)
+_wants = ("画图", "柱状图", "折线图", "散点图", "热力图", "可视化", "插图", "配图")
+_hit = [w for w in _wants if w in _desc]
+if len(_hit) < 5:
+    _ext.append(f"SKILL.md 的 description 只命中 {len(_hit)} 个用户会打的词（{_hit}）——"
+                f"路由面太窄，上限一千多字符，没有省的必要")
+for m in _ext:
+    bad(m)
+if not _ext:
+    ok(f"仓库外照 SKILL.md 出图、校验、落盘全部走通；description 命中 {len(_hit)} 个用户词")
 
 # 4.02 · 校验器盲区 ───────────────────────────────────────────
 # 定点突变：拿一份真实合规的产物，改坏一处，断言**对的那条规则**开口。

@@ -1,6 +1,6 @@
 ---
 name: inkstone
-description: 中文优先的静态印刷图表生成 skill。输出矢量 SVG / PDF / 300dpi PNG，无 JavaScript 运行时，可直接置入 Word、LaTeX、InDesign 和幻灯片。按期刊栏宽、中文字号下限、灰度可读性和色盲安全约束出图，所有规范由 scripts/validate.py 机器判定。用于期刊配图、券商研报、教材插图、政企汇报等需要印刷或归档的场合。
+description: 画图表、做数据可视化、出论文插图和研报配图时用它——柱状图、条形图、折线图、散点图、箱线图、热力图、直方图、堆叠图、蜂群图等十三种静态图型。中文优先的印刷级出图：矢量 SVG / PDF / 300dpi PNG，零第三方依赖，无 JavaScript 运行时，可直接置入 Word、LaTeX、InDesign 和幻灯片。按期刊栏宽（85/114/170/156/254mm）、中文字号地板 7.5pt、线宽地板 0.35pt、灰度可读性与色盲安全约束出图，所有规范由 scripts/validate.py 机器判定，不合规当场拒绝而不是画一张错图。用于期刊配图、SCI 论文插图、券商研报、教材插图、政企汇报等需要印刷或归档的场合。Print-first static charts for Chinese documents — measured in points, journal column widths, machine-validated. 不做交互图表、仪表盘、网页可视化和动画。
 ---
 
 # Inkstone — 印刷图表规范
@@ -13,16 +13,31 @@ description: 中文优先的静态印刷图表生成 skill。输出矢量 SVG / 
 
 ## 零、硬约束（违反即返工）
 
-1. **必须从 `catalog.md` 锁定图型编号**，再打开 `charts/` 里对应文件，按 `# ════ 编号 图名 ════` 注释块读实现。不得脱离既有图型另写一个"差不多的"。
-2. **一切取值来自 `tokens.py`。** 不在代码里写 hex、写 pt、写字体名。与 token 冲突的取值一律以 token 为准。
-3. **宽度必须是 `tokens.COLUMN` 里的某一个值。** 图的宽度由载体决定：期刊单栏 85mm、1.5 栏 114mm、双栏 170mm、A4 正文 156mm、幻灯片 254mm。不存在"我觉得这么宽好看"。五档都有测试覆盖。**图形区高度不要写常数**，用 `T.plot_height(图形区宽度, 档位)`——栏宽差三倍，常数高度会把宽栏图压成扁带。
+1. **先认准 skill 根目录。** 就是这份 `SKILL.md` 所在的目录（装成 skill 时一般是
+   `~/.claude/skills/inkstone/`）。**你的工作目录是用户的项目，不是这里**——照字面敲
+   `python3 scripts/validate.py` 会找不到文件，`from charts.rank_bars import ...` 会
+   ModuleNotFoundError。出图前先把 skill 根目录放进 `sys.path`：
+
+   ```python
+   import sys; sys.path.insert(0, "<skill 根目录>")
+   from charts.rank_bars import rank_bars
+   from scripts.render import render
+   ```
+
+   之后所有命令都用它的绝对路径：`python3 <skill 根目录>/scripts/validate.py 你的图.svg`。
+   **产物写进用户的目录**（`render(svg, "名字", outdir=".")`），不要写回 skill 目录——
+   那里是只读的参考实现，不是工作区。
+
+2. **必须从 `catalog.md` 锁定图型编号**，再打开 `charts/` 里对应文件，按 `# ════ 编号 图名 ════` 注释块读实现。不得脱离既有图型另写一个"差不多的"。
+3. **一切取值来自 `tokens.py`。** 不在代码里写 hex、写 pt、写字体名。与 token 冲突的取值一律以 token 为准。
+4. **宽度必须是 `tokens.COLUMN` 里的某一个值。** 图的宽度由载体决定：期刊单栏 85mm、1.5 栏 114mm、双栏 170mm、A4 正文 156mm、幻灯片 254mm。不存在"我觉得这么宽好看"。五档都有测试覆盖。**图形区高度不要写常数**，用 `T.plot_height(图形区宽度, 档位)`——栏宽差三倍，常数高度会把宽栏图压成扁带。
    **整图高度也有上限**（`tokens.PAGE_DEPTH`）：图不能比它要落进去的那一页还高。宽度由栏宽决定，高度由页面决定，两个方向都不是"我觉得多高好看"。超了就拆图 / 换宽栏 / 减类目。
-4. **中文字号地板 7.5pt，拉丁 6.0pt。** 装不下的信息删掉或换图型，**不许缩小字号硬塞**——屏幕上 6.5px 的中文标签还能勉强认，印出来是一团墨。
-5. **默认全灰。** 彩色需要用户明确要求，见第二点五节。
-6. **柱长 ∝ 数值，不断轴。** 极端值的三个诚实做法：让它冲天 / 主图加放大镜小图 / 明说画不下并撕柱不撕轴。
+5. **中文字号地板 7.5pt，拉丁 6.0pt。** 装不下的信息删掉或换图型，**不许缩小字号硬塞**——屏幕上 6.5px 的中文标签还能勉强认，印出来是一团墨。
+6. **默认全灰。** 彩色需要用户明确要求，见第二点五节。
+7. **柱长 ∝ 数值，不断轴。** 极端值的三个诚实做法：让它冲天 / 主图加放大镜小图 / 明说画不下并撕柱不撕轴。
    **从零点单向长出来的图（R1 R3 S1 S3 C1 C2）不接受负值，代码强制。** 负值在这些
    几何里没有画法：条会被吞成零长、数值跑到纸外、百格方阵会分出 165 格。有正负走 R2 分岔条。
-7. **交付前必须跑 `python3 scripts/validate.py out/*.svg` 且退出码为 0。**
+8. **交付前必须跑 `python3 scripts/validate.py out/*.svg` 且退出码为 0。**
 
 ## 一、工作流程
 

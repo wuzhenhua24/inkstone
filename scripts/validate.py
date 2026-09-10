@@ -528,7 +528,7 @@ def check_docs(readme=None, root=None):
 
 USAGE = """用法：python3 scripts/validate.py out/*.svg
 
-SKILL.md 第零节第 7 条把这条命令的退出码当作交付闸门，所以它不给参数时
+SKILL.md 第零节第 8 条把这条命令的退出码当作交付闸门，所以它不给参数时
 **必须失败**：glob 匹配不到任何文件（out/ 是空的、或者根本没出图）时，
 shell 传进来的就是零个参数。此时若照旧打印「0 个文件，0 项不合格」并
 退出 0，闸门就在「一张图都没有」的情况下放行了——而这正是最该拦住的

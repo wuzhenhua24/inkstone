@@ -153,7 +153,7 @@ python3 tests/run.py
 ## 结构
 
 ```
-SKILL.md            # 决策规则，111 行
+SKILL.md            # 决策规则，126 行
 catalog.md          # 图型索引：数据形状 / 版心 / 类目上限 / 失效条件 / 实现位置
 tokens.py           # 唯一取值来源：版心、字号、灰阶、线宽、字体栈
 palettes.py         # 彩色档：色相可换，L* 不可换
