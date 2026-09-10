@@ -526,8 +526,20 @@ def check_docs(readme=None, root=None):
     return fails
 
 
+USAGE = """用法：python3 scripts/validate.py out/*.svg
+
+SKILL.md 第零节第 7 条把这条命令的退出码当作交付闸门，所以它不给参数时
+**必须失败**：glob 匹配不到任何文件（out/ 是空的、或者根本没出图）时，
+shell 传进来的就是零个参数。此时若照旧打印「0 个文件，0 项不合格」并
+退出 0，闸门就在「一张图都没有」的情况下放行了——而这正是最该拦住的
+那种交付。"""
+
+
 if __name__ == "__main__":
-    targets = sys.argv[1:] or []
+    targets = sys.argv[1:]
+    if not targets or targets[0] in ("-h", "--help"):
+        print(USAGE)
+        sys.exit(0 if targets[:1] in (["-h"], ["--help"]) else 2)
     total = 0
     tok = check_tokens()
     print("✓ tokens.py" if not tok else "✗ tokens.py")
@@ -545,7 +557,17 @@ if __name__ == "__main__":
         print(f"    {f}")
     total += len(doc)
     for p in targets:
-        fails = check(p)
+        # 一份读不了或解析不了的产物，不能把后面几十份的检查一起带走。
+        # 裸 traceback 还有个更坏的地方：退出码非零，看起来像「校验器
+        # 拦下了什么」，实际是它自己死在第一份上，剩下的一份都没查。
+        try:
+            fails = check(p)
+        except FileNotFoundError:
+            fails = [f"文件不存在——glob 没匹配上？先跑 python3 demo.py"]
+        except ET.ParseError as e:
+            fails = [f"不是合法的 SVG：{e}"]
+        except Exception as e:
+            fails = [f"校验时抛了 {type(e).__name__}: {e}——这份产物没有被检查"]
         total += len(fails)
         mark = "✗" if fails else "✓"
         print(f"{mark} {p}")

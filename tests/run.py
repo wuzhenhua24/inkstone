@@ -6,6 +6,7 @@
   2 校验      产物 / token / 目录 / README 全部合规
   3 反例      校验器仍然抓得住违规，条数不少于预期
   4 越界      每张有上限的图型都会拒绝超限数据
+  4.01 闸门   validate.py 的退出码本身要对（不给参数必须失败）
   4.02 盲区   定点突变，每处都要被对应的那条规则点名
   4.05 界内   恰好取到声明的上限那一档，必须画得出来且合规
   4.06 数值   数值永不排成科学计数法（:,g 在 |v| ≥ 1e6 时会）
@@ -15,12 +16,12 @@
   4.4 色板    切色板后原语默认参数必须跟着走，不许漏出 mono 灰
   4.5 版心    13 张 × 5 档栏宽全部渲染并合规；图形区高度随栏宽增长
   4.7 字宽    东亚歧义宽度字符在中文串里按整字身算（「·」实测差 3.6 倍）
-  5 确定性    跑两次字节相同（演示数据不许用随机数）
+  5 确定性    清空 out/ 后跑两次，字节与产物清单都相同
   5.5 导出    PDF / PNG 真的产出、不是空白页；PNG 带 300dpi 分辨率块
   6 目录闭环  catalog 里每个编号都有渲染产物
-  7 灰度等价  彩色版逐处用色的明度必须与 mono 版一致
+  7 灰度等价  13 张 × 3 套色板，逐处用色的明度必须与 mono 版一致
 """
-import io, os, re, struct, subprocess, sys, contextlib
+import io, os, re, shutil, struct, subprocess, sys, contextlib
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -57,6 +58,14 @@ def warn(msg):
 
 
 # 1 · 渲染 ─────────────────────────────────────────────────────
+# 先清空 out/。不清的话，上一次跑剩的文件会被当成本次产物——实测把一份
+# zz-stale.svg（连同 pdf/png）放进去，全套照样 exit=0，而且一本正经地报
+# 「22 份产物两次渲染字节一致」：那一份这两次都没有被渲染过。
+# 一条能被陈旧文件满足的确定性承诺，就不再是承诺。
+if os.path.isdir("out"):
+    shutil.rmtree("out")
+os.makedirs("out", exist_ok=True)
+
 group("渲染")
 for script in ("demo.py", "demo_palettes.py"):
     r = subprocess.run([sys.executable, script], capture_output=True, text=True)
@@ -126,16 +135,38 @@ GUARDS = [
                                   for i in range(151)],)),
     ("D2 点数超限", beeswarm, ([("甲", [1] * 181)],)),
 ]
+# 不能只看「抛没抛 ValueError」。两个理由：
+#   一是替身——拦下它的可能是另一道守卫，那么被测的这道其实已经失效了，
+#     而测试照样绿。所以断言报错里点了名：每道上限的话都以「<编号> …最多」开头。
+#   二是崩溃——`except ValueError` 不接别的异常。实测把 S2 的 MAX_SERIES
+#     守卫改成 `if False:`，8 条线会走到 widths[6] 抛 IndexError，
+#     **整个测试进程当场被冲垮，后面每一组一条都没跑**。一道守卫坏掉
+#     不该把整套测试的结论一起带走，所以这里接住所有异常，分开报。
+def guard_check(label, fn, args, kw, want):
+    code = label.split()[0]
+    try:
+        fn(*args, title="越界", **kw)
+    except ValueError as e:
+        msg = str(e)
+        if not msg.startswith(code) or want not in msg:
+            return (f"{label} 是被拦下了，但报错不是这道守卫说的话"
+                    f"（期望以「{code}」开头且含「{want}」，实得「{msg[:44]}」）"
+                    f"——被别的守卫顶了包，这道其实已经失效")
+        return None
+    except Exception as e:
+        return (f"{label} 抛的是 {type(e).__name__}: {str(e)[:40]}，不是给用户的"
+                f"改图建议。裸异常还会把整套测试冲垮，后面每一组都不会跑。")
+    return f"{label} 未被拦下"
+
+
 leaked = 0
 for label, fn, args in GUARDS:
-    try:
-        fn(*args, title="越界")
-        bad(f"{label} 未被拦下")
+    m = guard_check(label, fn, args, {}, "最多")
+    if m:
+        bad(m)
         leaked += 1
-    except ValueError:
-        pass
 if not leaked:
-    ok(f"{len(GUARDS)} 道上限全部生效")
+    ok(f"{len(GUARDS)} 道上限全部生效，且都是这道守卫自己报的错")
 
 # R3 的上限不是类目数，是「这么多点摆不摆得下」，所以上面那张表测不到它。
 # 两条路径分开测：
@@ -171,6 +202,37 @@ except ValueError:
     pass
 if not blown:
     ok("R3 每点当量随量级无上限地走，显式传的装不下时当场拒绝")
+
+# 4.01 · 交付闸门 ─────────────────────────────────────────────
+# SKILL.md 第零节第 7 条把 `python3 scripts/validate.py out/*.svg` 的退出码
+# 当作交付闸门。那条命令在两种情况下会**空过**，而两种都正好是最该拦住的：
+#   · 一张图都没出：glob 匹配不到文件，shell 传进来零个参数，
+#     校验器照旧打印「0 个文件，0 项不合格」并退出 0；
+#   · 某一份读不了：裸 traceback 中断整个循环，后面几十份一份都没查，
+#     而退出码非零，看起来倒像是「它拦下了什么」。
+# 闸门自己没被测过，等于整条硬约束建在沙上。
+group("交付闸门")
+_V = [sys.executable, os.path.join("scripts", "validate.py")]
+GATE = [
+    ("不给参数（out/ 是空的就是这样）", [], 2),
+    ("--help", ["--help"], 0),
+    ("文件不存在", [os.path.join("out", "nope.svg")], 1),
+    ("正常产物", [os.path.join("out", n) for n in svgs], 0),
+]
+_gate_bad = 0
+for _label, _args, _want in GATE:
+    _r = subprocess.run(_V + _args, capture_output=True, text=True)
+    if _r.returncode != _want:
+        bad(f"交付闸门「{_label}」退出码 {_r.returncode}，应为 {_want}")
+        _gate_bad += 1
+# 一份坏文件不能把后面的检查一起带走
+_r = subprocess.run(_V + [os.path.join("out", "nope.svg"),
+                          os.path.join("out", svgs[0])], capture_output=True, text=True)
+if svgs[0] not in _r.stdout:
+    bad("一份文件读不了就中断了整个循环——后面的产物一份都没被检查")
+    _gate_bad += 1
+if not _gate_bad:
+    ok(f"{len(GATE)} 种调用方式退出码都对，坏文件不会带走后面的检查")
 
 # 4.02 · 校验器盲区 ───────────────────────────────────────────
 # 定点突变：拿一份真实合规的产物，改坏一处，断言**对的那条规则**开口。
@@ -364,12 +426,15 @@ NEG = [
 ]
 leaked = 0
 for label, fn, args in NEG:
-    try:
-        fn(*args, title="负值")
-        bad(f"{label} 未被拦下——画出了一张长度不 ∝ 数值的图")
+    # 同样要点名。负值守卫和类目上限守卫都抛 ValueError，只看类型的话，
+    # 一张图的负值守卫失效、恰好被别的守卫拦下，测试是看不出来的。
+    # 关键词取「负值」而不是 require_nonneg 那句「不接受负值」：S2 有它
+    # 自己更贴切的说法（y_from_zero=True 会把标度域钉在 0）。编号前缀已经
+    # 保证了是这张图自己的守卫，措辞不必强求统一。
+    m = guard_check(label, fn, args, {}, "负值")
+    if m:
+        bad(m.replace("未被拦下", "未被拦下——画出了一张长度不 ∝ 数值的图"))
         leaked += 1
-    except ValueError:
-        pass
 # R2 分岔条的职责就是承载正负，它必须照画不误
 try:
     diverging_bars([("甲", 5), ("乙", -3)], title="正负")
@@ -576,10 +641,19 @@ if not wrong:
 
 # 5 · 确定性 ───────────────────────────────────────────────────
 group("确定性")
+# 清空之后再渲染一次：既比字节，也比产物清单。只覆盖不清空的话，
+# 某张图从此不再产出（比如被误删了调用）也发现不了——旧文件还躺在那儿。
 before = {n: open(os.path.join("out", n), "rb").read() for n in svgs}
+shutil.rmtree("out")
+os.makedirs("out", exist_ok=True)
 for script in ("demo.py", "demo_palettes.py"):
     subprocess.run([sys.executable, script], capture_output=True)
-drift = [n for n in svgs if open(os.path.join("out", n), "rb").read() != before[n]]
+again = sorted(f for f in os.listdir("out") if f.endswith(".svg") and not f.startswith("_"))
+if again != svgs:
+    bad(f"两次渲染的产物清单不同：多出 {sorted(set(again) - set(svgs))}，"
+        f"少了 {sorted(set(svgs) - set(again))}")
+drift = [n for n in svgs if n in again
+         and open(os.path.join("out", n), "rb").read() != before[n]]
 if drift:
     bad(f"两次渲染结果不同：{', '.join(drift)}——演示数据里有随机数")
 else:
@@ -589,7 +663,6 @@ else:
 # render() 在缺 rsvg-convert 时会静默降级到只出 SVG。CI 上必须
 # 装了才算数——否则「能导出 PDF」这条卖点从来没被验证过。
 group("导出")
-import shutil
 if not shutil.which("rsvg-convert"):
     warn("未找到 rsvg-convert，PDF/PNG 导出路径未经验证"
          "（brew install librsvg / apt install librsvg2-bin）")
@@ -691,30 +764,39 @@ from charts._color import lstar as _ls
 HEXPAT = re.compile(r'(?:fill|stroke|data-on)="(#[0-9A-Fa-f]{6})"')
 
 
-def _profile(path):
-    return [_ls(c) for c in HEXPAT.findall(open(path, encoding="utf-8").read())]
+def _profile_text(svg):
+    return [_ls(c) for c in HEXPAT.findall(svg)]
 
 
-worst_all = 0.0
-for chart in ("rank", "heat"):
-    base_p = os.path.join("out", f"pal-mono-{chart}.svg")
-    if not os.path.exists(base_p):
-        bad(f"缺少 mono 基准 {base_p}")
-        continue
-    base = _profile(base_p)
+# 覆盖全部 13 张，不是只覆盖 demo_palettes 出的那 2 张。
+#
+# 先说清楚这一步买到了什么：**当前一条也多抓不到。** 实测 R1 + M1 两张
+# 已经把七级明度 {12,25,37,49,62,76,88} 全部用到了，其余 11 张没有带来
+# 任何新的明度；把 LADDER 改偏 3 L*，第一个报的也是 R1。
+# 留着它是为了以后：某张图一旦不再直接取 ramp（混色、加网、按数据插值），
+# L* 就可能只在那张图上漂，而 R1/M1 看不见。代价是 39 次渲染，不花时间。
+#
+# 真正当场解掉的是另一件事：不再依赖 out/pal-*.svg 存在。现场渲染，
+# demo_palettes 出没出图都不影响这条最重的承诺被检查。
+worst_all, n_pairs = 0.0, 0
+for code, draw in fx.ALL:
+    base = _profile_text(draw("single"))
     for pal in palettes.PRESETS:
         if pal == "mono":
             continue
-        got = _profile(os.path.join("out", f"pal-{pal}-{chart}.svg"))
+        with T.use(pal):
+            got = _profile_text(draw("single"))
         if len(got) != len(base):
-            bad(f"{pal}/{chart} 用色处数 {len(got)} ≠ mono 的 {len(base)}")
+            bad(f"{pal}/{code} 用色处数 {len(got)} ≠ mono 的 {len(base)}")
             continue
-        w = max(abs(a - b) for a, b in zip(base, got))
+        w = max((abs(a - b) for a, b in zip(base, got)), default=0.0)
         worst_all = max(worst_all, w)
+        n_pairs += 1
         if w > 1.0:
-            bad(f"{pal}/{chart} 最大明度偏差 {w:.1f} L* > 1.0——影印成灰度后和 mono 版对不上")
+            bad(f"{pal}/{code} 最大明度偏差 {w:.1f} L* > 1.0——影印成灰度后和 mono 版对不上")
 if worst_all <= 1.0:
-    ok(f"3 套色板 × 2 张，最大明度偏差 {worst_all:.1f} L*")
+    ok(f"{len(fx.ALL)} 张 × {len(palettes.PRESETS) - 1} 套色板 = {n_pairs} 组，"
+       f"最大明度偏差 {worst_all:.1f} L*")
 
 # ──────────────────────────────────────────────────────────────
 print()
