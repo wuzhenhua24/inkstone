@@ -2,7 +2,7 @@
 """R2 分岔条 · 带正负的分类数值（≤10 项）"""
 import tokens as T
 from charts import _svg as S
-from charts._data import require
+from charts._data import require, num
 from charts._data import decimals_for, fmt
 
 
@@ -29,7 +29,7 @@ def diverging_bars(data, title=None, subtitle=None, source=None,
 
     dec = decimals_for([v for _, v in data])
     vmax = max((abs(v) for _, v in data), default=1) or 1
-    val_w = max(S.text_width(fmt(v, dec) + unit, T.SIZE["value"]) for _, v in data)
+    val_w = max(S.text_width(num(v, unit, dec), T.SIZE["value"]) for _, v in data)
 
     # 两侧必须同一标度，否则「跌得比涨得多」这种判断会被画反。
     # 零点按正负极值的实际比例落位，两边共用同一个 pt/单位。
@@ -61,7 +61,7 @@ def diverging_bars(data, title=None, subtitle=None, source=None,
         bw = abs(v) * unit_px
         bx = zx if v >= 0 else zx - bw
         parts.append(S.rect(bx, by, bw, bar_h, ink))
-        txt = fmt(v, dec) + unit
+        txt = num(v, unit, dec)
         if v >= 0:
             parts.append(S.text(zx + bw + 4, by + bar_h - 0.3, txt,
                                 T.SIZE["value"], ink, T.WEIGHT["value"]))

@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1"
+     width="481.89pt" height="210.657pt"
+     viewBox="0 0 481.89 210.657"
+     data-palette="mono">
+<rect width="100%" height="100%" fill="#FFFFFF"/>
+<text x="6" y="14.5" font-size="10.5" fill="#1F1F1F" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" font-weight="600" data-slot="title" font-variant-numeric="tabular-nums">八个区域里只有东北全年走低</text>
+<text x="6" y="27.5" font-size="9.0" fill="#575757" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" data-slot="subtitle" font-variant-numeric="tabular-nums">月度新签合同数 · 单位：份 · 2026 年</text>
+<text x="6.0" y="47.0" font-size="7.5" fill="#3B3B3B" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" font-variant-numeric="tabular-nums">华东</text>
+<text x="116.722" y="47.0" font-size="8.0" fill="#1F1F1F" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" font-weight="600" text-anchor="end" font-variant-numeric="tabular-nums">114.9</text>
+<line x1="6.0" y1="102.328" x2="116.722" y2="102.328" stroke="#DDDDDD" stroke-width="0.35"/>
+<line x1="6.0" y1="52.0" x2="116.722" y2="52.0" stroke="#DDDDDD" stroke-width="0.35" stroke-dasharray="1.5 1.5"/>
+<path d="M6.0 63.659 L16.066 62.611 L26.131 60.43 L36.197 60.011 L46.263 59.046 L56.328 58.794 L66.394 58.207 L76.46 57.872 L86.525 56.697 L96.591 55.775 L106.657 55.104 L116.722 54.139" fill="none" stroke="#3B3B3B" stroke-width="1.0" stroke-linecap="round"/>
+<circle cx="116.722" cy="54.139" r="1.44" fill="#1F1F1F"/>
+<text x="125.722" y="47.0" font-size="7.5" fill="#3B3B3B" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" font-variant-numeric="tabular-nums">华南</text>
+<text x="236.445" y="47.0" font-size="8.0" fill="#1F1F1F" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" font-weight="600" text-anchor="end" font-variant-numeric="tabular-nums">99.8</text>
+<line x1="125.722" y1="102.328" x2="236.445" y2="102.328" stroke="#DDDDDD" stroke-width="0.35"/>
+<line x1="125.722" y1="52.0" x2="236.445" y2="52.0" stroke="#DDDDDD" stroke-width="0.35" stroke-dasharray="1.5 1.5"/>
+<path d="M125.722 69.405 L135.788 68.231 L145.854 66.218 L155.919 65.589 L165.985 63.492 L176.051 63.659 L186.116 62.15 L196.182 61.94 L206.248 61.017 L216.314 60.094 L226.379 60.178 L236.445 60.472" fill="none" stroke="#3B3B3B" stroke-width="1.0" stroke-linecap="round"/>
+<circle cx="236.445" cy="60.472" r="1.44" fill="#1F1F1F"/>
+<text x="245.445" y="47.0" font-size="7.5" fill="#3B3B3B" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" font-variant-numeric="tabular-nums">华北</text>
+<text x="356.167" y="47.0" font-size="8.0" fill="#1F1F1F" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" font-weight="600" text-anchor="end" font-variant-numeric="tabular-nums">78.6</text>
+<line x1="245.445" y1="102.328" x2="356.167" y2="102.328" stroke="#DDDDDD" stroke-width="0.35"/>
+<line x1="245.445" y1="52.0" x2="356.167" y2="52.0" stroke="#DDDDDD" stroke-width="0.35" stroke-dasharray="1.5 1.5"/>
+<path d="M245.445 74.48 L255.511 75.361 L265.576 75.193 L275.642 73.725 L285.708 74.061 L295.773 73.054 L305.839 71.502 L315.905 71.67 L325.97 70.286 L336.036 70.076 L346.102 70.705 L356.167 69.363" fill="none" stroke="#3B3B3B" stroke-width="1.0" stroke-linecap="round"/>
+<circle cx="356.167" cy="69.363" r="1.44" fill="#1F1F1F"/>
+<text x="365.167" y="47.0" font-size="7.5" fill="#3B3B3B" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" font-variant-numeric="tabular-nums">西南</text>
+<text x="475.89" y="47.0" font-size="8.0" fill="#1F1F1F" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" font-weight="600" text-anchor="end" font-variant-numeric="tabular-nums">95.0</text>
+<line x1="365.167" y1="102.328" x2="475.89" y2="102.328" stroke="#DDDDDD" stroke-width="0.35"/>
+<line x1="365.167" y1="52.0" x2="475.89" y2="52.0" stroke="#DDDDDD" stroke-width="0.35" stroke-dasharray="1.5 1.5"/>
+<path d="M365.167 75.948 L375.233 75.067 L385.299 72.551 L395.364 72.719 L405.43 72.802 L415.496 71.544 L425.561 68.944 L435.627 67.979 L445.693 65.798 L455.758 65.085 L465.824 64.205 L475.89 62.485" fill="none" stroke="#3B3B3B" stroke-width="1.0" stroke-linecap="round"/>
+<circle cx="475.89" cy="62.485" r="1.44" fill="#1F1F1F"/>
+<text x="6.0" y="121.828" font-size="7.5" fill="#3B3B3B" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" font-variant-numeric="tabular-nums">华中</text>
+<text x="116.722" y="121.828" font-size="8.0" fill="#1F1F1F" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" font-weight="600" text-anchor="end" font-variant-numeric="tabular-nums">58.2</text>
+<line x1="6.0" y1="177.157" x2="116.722" y2="177.157" stroke="#DDDDDD" stroke-width="0.35"/>
+<line x1="6.0" y1="126.828" x2="116.722" y2="126.828" stroke="#DDDDDD" stroke-width="0.35" stroke-dasharray="1.5 1.5"/>
+<path d="M6.0 156.312 L16.066 155.222 L26.131 153.838 L36.197 152.202 L46.263 152.747 L56.328 151.196 L66.394 152.37 L76.46 152.202 L86.525 150.65 L96.591 151.489 L106.657 152.202 L116.722 152.747" fill="none" stroke="#3B3B3B" stroke-width="1.0" stroke-linecap="round"/>
+<circle cx="116.722" cy="152.747" r="1.44" fill="#1F1F1F"/>
+<text x="6.0" y="187.657" font-size="7.5" fill="#747474" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" font-variant-numeric="tabular-nums">1月</text>
+<text x="116.722" y="187.657" font-size="7.5" fill="#747474" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" text-anchor="end" font-variant-numeric="tabular-nums">12月</text>
+<text x="125.722" y="121.828" font-size="7.5" fill="#3B3B3B" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" font-variant-numeric="tabular-nums">东北</text>
+<text x="236.445" y="121.828" font-size="8.0" fill="#1F1F1F" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" font-weight="600" text-anchor="end" font-variant-numeric="tabular-nums">23.7</text>
+<line x1="125.722" y1="177.157" x2="236.445" y2="177.157" stroke="#DDDDDD" stroke-width="0.35"/>
+<line x1="125.722" y1="126.828" x2="236.445" y2="126.828" stroke="#DDDDDD" stroke-width="0.35" stroke-dasharray="1.5 1.5"/>
+<path d="M125.722 160.339 L135.788 161.471 L145.854 162.771 L155.919 164.281 L165.985 165.413 L176.051 166.546 L186.116 166.504 L196.182 167.72 L206.248 166.965 L216.314 166.085 L226.379 165.33 L236.445 167.217" fill="none" stroke="#3B3B3B" stroke-width="1.0" stroke-linecap="round"/>
+<circle cx="236.445" cy="167.217" r="1.44" fill="#1F1F1F"/>
+<text x="125.722" y="187.657" font-size="7.5" fill="#747474" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" font-variant-numeric="tabular-nums">1月</text>
+<text x="236.445" y="187.657" font-size="7.5" fill="#747474" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" text-anchor="end" font-variant-numeric="tabular-nums">12月</text>
+<text x="245.445" y="121.828" font-size="7.5" fill="#3B3B3B" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" font-variant-numeric="tabular-nums">西北</text>
+<text x="356.167" y="121.828" font-size="8.0" fill="#1F1F1F" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" font-weight="600" text-anchor="end" font-variant-numeric="tabular-nums">52.4</text>
+<line x1="245.445" y1="177.157" x2="356.167" y2="177.157" stroke="#DDDDDD" stroke-width="0.35"/>
+<line x1="245.445" y1="126.828" x2="356.167" y2="126.828" stroke="#DDDDDD" stroke-width="0.35" stroke-dasharray="1.5 1.5"/>
+<path d="M245.445 163.107 L255.511 163.568 L265.576 162.813 L275.642 160.884 L285.708 159.29 L295.773 158.745 L305.839 159.122 L315.905 157.78 L325.97 157.738 L336.036 156.983 L346.102 154.886 L356.167 155.18" fill="none" stroke="#3B3B3B" stroke-width="1.0" stroke-linecap="round"/>
+<circle cx="356.167" cy="155.18" r="1.44" fill="#1F1F1F"/>
+<text x="245.445" y="187.657" font-size="7.5" fill="#747474" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" font-variant-numeric="tabular-nums">1月</text>
+<text x="356.167" y="187.657" font-size="7.5" fill="#747474" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" text-anchor="end" font-variant-numeric="tabular-nums">12月</text>
+<text x="365.167" y="121.828" font-size="7.5" fill="#3B3B3B" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" font-variant-numeric="tabular-nums">港澳台</text>
+<text x="475.89" y="121.828" font-size="8.0" fill="#1F1F1F" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" font-weight="600" text-anchor="end" font-variant-numeric="tabular-nums">30.2</text>
+<line x1="365.167" y1="177.157" x2="475.89" y2="177.157" stroke="#DDDDDD" stroke-width="0.35"/>
+<line x1="365.167" y1="126.828" x2="475.89" y2="126.828" stroke="#DDDDDD" stroke-width="0.35" stroke-dasharray="1.5 1.5"/>
+<path d="M365.167 165.665 L375.233 166.923 L385.299 166.756 L395.364 167.804 L405.43 167.552 L415.496 166.168 L425.561 165.12 L435.627 164.575 L445.693 164.7 L455.758 165.33 L465.824 164.868 L475.89 164.491" fill="none" stroke="#3B3B3B" stroke-width="1.0" stroke-linecap="round"/>
+<circle cx="475.89" cy="164.491" r="1.44" fill="#1F1F1F"/>
+<text x="365.167" y="187.657" font-size="7.5" fill="#747474" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" font-variant-numeric="tabular-nums">1月</text>
+<text x="475.89" y="187.657" font-size="7.5" fill="#747474" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" text-anchor="end" font-variant-numeric="tabular-nums">12月</text>
+<text x="6" y="206.657" font-size="7.5" fill="#747474" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" font-weight="500" letter-spacing="0.06em" data-slot="source" font-variant-numeric="tabular-nums">数据来源：CRM 合同台账 · 各格共享纵轴 0–120</text>
+</svg>

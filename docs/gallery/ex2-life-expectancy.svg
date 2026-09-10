@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1"
+     width="240.945pt" height="233.15pt"
+     viewBox="0 0 240.945 233.15"
+     data-palette="mono">
+<rect width="100%" height="100%" fill="#FFFFFF"/>
+<text x="6" y="14.5" font-size="10.5" fill="#1F1F1F" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" font-weight="600" data-slot="title" font-variant-numeric="tabular-nums">撒南非洲比欧洲与中亚低 15.6 岁</text>
+<text x="6" y="27.5" font-size="9.0" fill="#575757" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" data-slot="subtitle" font-variant-numeric="tabular-nums">出生时预期寿命中位数 · 2023 年 · 单位：岁</text>
+<text x="6" y="39.65" font-size="9.0" fill="#575757" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" data-slot="subtitle" font-variant-numeric="tabular-nums">箱体为四分位距</text>
+<line x1="6.0" y1="51.65" x2="6.0" y2="189.65" stroke="#DDDDDD" stroke-width="0.35"/>
+<line x1="63.236" y1="51.65" x2="63.236" y2="189.65" stroke="#DDDDDD" stroke-width="0.35"/>
+<line x1="120.472" y1="51.65" x2="120.472" y2="189.65" stroke="#DDDDDD" stroke-width="0.35"/>
+<line x1="177.709" y1="51.65" x2="177.709" y2="189.65" stroke="#DDDDDD" stroke-width="0.35"/>
+<line x1="234.945" y1="51.65" x2="234.945" y2="189.65" stroke="#DDDDDD" stroke-width="0.35"/>
+<text x="6" y="59.15" font-size="7.5" fill="#575757" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" font-variant-numeric="tabular-nums">欧洲与中亚   n=58</text>
+<line x1="120.873" y1="66.15" x2="214.168" y2="66.15" stroke="#747474" stroke-width="0.5"/>
+<line x1="120.873" y1="63.95" x2="120.873" y2="68.35" stroke="#747474" stroke-width="0.5"/>
+<line x1="214.168" y1="63.95" x2="214.168" y2="68.35" stroke="#747474" stroke-width="0.5"/>
+<rect x="153.984" y="62.65" width="37.719" height="7.0" fill="#BBBBBB"/>
+<line x1="176.077" y1="61.15" x2="176.077" y2="71.15" stroke="#1F1F1F" stroke-width="2.0"/>
+<text x="6" y="88.15" font-size="7.5" fill="#575757" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" font-variant-numeric="tabular-nums">中东与北非   n=23</text>
+<line x1="92.827" y1="95.15" x2="196.94" y2="95.15" stroke="#747474" stroke-width="0.5"/>
+<line x1="92.827" y1="92.95" x2="92.827" y2="97.35" stroke="#747474" stroke-width="0.5"/>
+<line x1="196.94" y1="92.95" x2="196.94" y2="97.35" stroke="#747474" stroke-width="0.5"/>
+<rect x="123.248" y="91.65" width="58.209" height="7.0" fill="#BBBBBB"/>
+<line x1="157.733" y1="90.15" x2="157.733" y2="100.15" stroke="#1F1F1F" stroke-width="2.0"/>
+<text x="6" y="117.15" font-size="7.5" fill="#575757" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" font-variant-numeric="tabular-nums">拉美与加勒比   n=42</text>
+<line x1="112.345" y1="124.15" x2="187.382" y2="124.15" stroke="#747474" stroke-width="0.5"/>
+<line x1="112.345" y1="121.95" x2="112.345" y2="126.35" stroke="#747474" stroke-width="0.5"/>
+<line x1="187.382" y1="121.95" x2="187.382" y2="126.35" stroke="#747474" stroke-width="0.5"/>
+<rect x="136.184" y="120.65" width="28.561" height="7.0" fill="#BBBBBB"/>
+<line x1="152.095" y1="119.15" x2="152.095" y2="129.15" stroke="#1F1F1F" stroke-width="2.0"/>
+<circle cx="91.511" cy="124.15" r="1.28" fill="#3B3B3B"/>
+<text x="6" y="146.15" font-size="7.5" fill="#575757" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" font-variant-numeric="tabular-nums">东亚与太平洋   n=37</text>
+<line x1="75.313" y1="153.15" x2="207.758" y2="153.15" stroke="#747474" stroke-width="0.5"/>
+<line x1="75.313" y1="150.95" x2="75.313" y2="155.35" stroke="#747474" stroke-width="0.5"/>
+<line x1="207.758" y1="150.95" x2="207.758" y2="155.35" stroke="#747474" stroke-width="0.5"/>
+<rect x="114.52" y="149.65" width="56.149" height="7.0" fill="#BBBBBB"/>
+<line x1="136.785" y1="148.15" x2="136.785" y2="158.15" stroke="#1F1F1F" stroke-width="2.0"/>
+<text x="6" y="175.15" font-size="7.5" fill="#575757" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" font-variant-numeric="tabular-nums">撒南非洲   n=48</text>
+<line x1="31.527" y1="182.15" x2="151.494" y2="182.15" stroke="#747474" stroke-width="0.5"/>
+<line x1="31.527" y1="179.95" x2="31.527" y2="184.35" stroke="#747474" stroke-width="0.5"/>
+<line x1="151.494" y1="179.95" x2="151.494" y2="184.35" stroke="#747474" stroke-width="0.5"/>
+<rect x="73.954" y="178.65" width="31.408" height="7.0" fill="#BBBBBB"/>
+<line x1="86.703" y1="177.15" x2="86.703" y2="187.15" stroke="#1F1F1F" stroke-width="2.0"/>
+<circle cx="155.158" cy="182.15" r="1.28" fill="#3B3B3B"/>
+<line x1="6" y1="189.65" x2="234.945" y2="189.65" stroke="#747474" stroke-width="0.5"/>
+<text x="6.0" y="200.15" font-size="7.5" fill="#747474" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" text-anchor="middle" font-variant-numeric="tabular-nums">50</text>
+<text x="63.236" y="200.15" font-size="7.5" fill="#747474" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" text-anchor="middle" font-variant-numeric="tabular-nums">60</text>
+<text x="120.472" y="200.15" font-size="7.5" fill="#747474" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" text-anchor="middle" font-variant-numeric="tabular-nums">70</text>
+<text x="177.709" y="200.15" font-size="7.5" fill="#747474" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" text-anchor="middle" font-variant-numeric="tabular-nums">80</text>
+<text x="234.945" y="200.15" font-size="7.5" fill="#747474" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" text-anchor="middle" font-variant-numeric="tabular-nums">90</text>
+<text x="6" y="218.65" font-size="7.5" fill="#747474" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" font-weight="500" letter-spacing="0.06em" data-slot="source" font-variant-numeric="tabular-nums">数据来源：世界银行 WDI · SP.DYN.LE00.IN</text>
+<text x="6" y="229.15" font-size="7.5" fill="#747474" font-family="'Inter','Helvetica Neue','PingFang SC','Source Han Sans SC','Noto Sans SC','Hiragino Sans GB',sans-serif" font-weight="500" letter-spacing="0.06em" data-slot="source" font-variant-numeric="tabular-nums">已剔除样本不足 10 国的北美、南亚</text>
+</svg>

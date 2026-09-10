@@ -540,19 +540,31 @@ if __name__ == "__main__":
     if not targets or targets[0] in ("-h", "--help"):
         print(USAGE)
         sys.exit(0 if targets[:1] in (["-h"], ["--help"]) else 2)
+    # 仓库自检（tokens / catalog / README）只在校验本仓自己的产物时跑。
+    # 用户在自己的项目里验自己的图，前三行却是 inkstone 的 README 体检——
+    # 这三行对他毫无意义，而且他若只拷了 charts/ + tokens.py，check_docs()
+    # 会直接 FileNotFoundError。按目标是否落在本仓内自动判，不用他记一个开关。
+    _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    own = all(os.path.abspath(t).startswith(_root + os.sep) for t in targets)
+
     total = 0
-    tok = check_tokens()
-    print("✓ tokens.py" if not tok else "✗ tokens.py")
+    if not own:
+        print(f"（校验 {len(targets)} 份仓库外的产物，跳过 inkstone 自身的体检）")
+    tok = check_tokens() if own else []
+    if own:
+        print("✓ tokens.py" if not tok else "✗ tokens.py")
     for f in tok:
         print(f"    {f}")
     total += len(tok)
-    cat = check_catalog()
-    print("✓ catalog.md" if not cat else "✗ catalog.md")
+    cat = check_catalog() if own else []
+    if own:
+        print("✓ catalog.md" if not cat else "✗ catalog.md")
     for f in cat:
         print(f"    {f}")
     total += len(cat)
-    doc = check_docs()
-    print("✓ README.md" if not doc else "✗ README.md")
+    doc = check_docs() if own else []
+    if own:
+        print("✓ README.md" if not doc else "✗ README.md")
     for f in doc:
         print(f"    {f}")
     total += len(doc)

@@ -38,7 +38,7 @@ def small_multiples(panels, x_labels, title=None, subtitle=None, source=None,
     # 也不把中文名截断成认不出的样子。这是版面组装第一条硬约束。
     dec = decimals_for([vs[-1] for _, vs in panels])
     lab_w = max(S.text_width(n, T.SIZE["label"]) for n, _ in panels)
-    val_w = max(S.text_width(fmt(vs[-1], dec) + unit, T.SIZE["value"])
+    val_w = max(S.text_width(num(vs[-1], unit, dec), T.SIZE["value"])
                 for _, vs in panels)
     min_pw = lab_w + val_w + 12
 
@@ -97,13 +97,13 @@ def small_multiples(panels, x_labels, title=None, subtitle=None, source=None,
 
         parts.append(S.text(gx, gy + lab_h, name, T.SIZE["label"], T.GRAY[1]))
         # 末值贴在名字同一行右端：小格里没有第二行的余量
-        parts.append(S.text(gx + pw, gy + lab_h, fmt(vs[-1], dec) + unit,
+        parts.append(S.text(gx + pw, gy + lab_h, num(vs[-1], unit, dec),
                             T.SIZE["value"], T.GRAY[0], T.WEIGHT["value"],
                             anchor="end"))
         # 独立标度时必须把各自的量程写出来，否则读者会误以为格间可比
         if not shared_scale:
             parts.append(S.text(gx, base + T.SIZE["source"] + 1,
-                                f"峰值 {fmt(max(vs), dec)}{unit}", T.SIZE["source"],
+                                f"峰值 {num(max(vs), unit, dec)}", T.SIZE["source"],
                                 T.GRAY[3]))
 
         parts.append(S.line(gx, base, gx + pw, base, T.GRAY[6], T.STROKE["hairline"]))

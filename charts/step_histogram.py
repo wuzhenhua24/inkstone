@@ -49,7 +49,7 @@ def step_histogram(values, title=None, subtitle=None, source=None,
         med = median(values)
         mx = px0 + (x1 - px0) * (med - edges[0]) / (edges[-1] - edges[0] or 1)
         parts.append(S.line(mx, top, mx, base, T.GRAY[0], T.STROKE["rule"], dash="2 2"))
-        lab = f"中位数 {fmt(med, decimals_for([med]))}{unit}"
+        lab = f"中位数 {num(med, unit, decimals_for([med]))}"
         lw = S.text_width(lab, T.SIZE["label"])
         parts.append(S.text(min(mx + 3, x1 - lw), top + T.SIZE["label"], lab,
                             T.SIZE["label"], T.GRAY[0]))
@@ -67,7 +67,7 @@ def step_histogram(values, title=None, subtitle=None, source=None,
         parts.append(S.text(px0 + k * bw, base + 3 + T.SIZE["label"], fmt(e, dec),
                             T.SIZE["label"], T.GRAY[3], anchor=anchor))
 
-    note = (f"n={len(values)} · 箱宽 {fmt(edges[1] - edges[0], dec)}{unit} · "
+    note = (f"n={len(values)} · 箱宽 {num(edges[1] - edges[0], unit, dec)} · "
             f"{len(counts)} 箱")
     src = f"{source} · {note}" if source else note
     H = base + T.SIZE["label"] + 8 + T.GAP["plot_source"] + T.SIZE["source"]

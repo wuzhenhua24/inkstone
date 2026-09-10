@@ -1,8 +1,80 @@
-# Inkstone
+# Inkstone 砚台 · 印刷优先的中文图表库
 
 [![ci](https://github.com/wuzhenhua24/inkstone/actions/workflows/ci.yml/badge.svg)](https://github.com/wuzhenhua24/inkstone/actions/workflows/ci.yml)
+![python](https://img.shields.io/badge/python-3.9%2B-blue)
+![deps](https://img.shields.io/badge/dependencies-0-black)
+[![license](https://img.shields.io/badge/license-MIT-black)](LICENSE)
+· English: [README.en.md](README.en.md)
 
-中文优先的**静态印刷**图表 skill。输出矢量 SVG / PDF / 300dpi PNG，无 JavaScript 运行时，直接置入 Word、LaTeX、InDesign 和幻灯片。
+以 **pt** 出图，宽度取自期刊栏宽，1:1 落纸。输出矢量 SVG / PDF / 300dpi PNG，
+无 JavaScript 运行时，直接置入 Word、LaTeX、InDesign 和幻灯片。**零第三方依赖。**
+
+![城镇化率](docs/gallery/ex3-urbanization.png)
+
+上面这张是 `examples/ex3_urbanization.py` 的产物，数据来自世界银行 WDI。
+注意图里那两行字——**带数字的结论标题**，和**自带指标编号与取数日期的来源行**。
+这套四件套（图题 / 副题 / 来源行）缺一条，校验器就不放行。
+
+## 快速开始
+
+**用 Claude Code 的**——整个仓库就是一个 skill，`SKILL.md` 在根目录：
+
+```bash
+git clone https://github.com/wuzhenhua24/inkstone ~/.claude/skills/inkstone
+```
+
+skill 要整个目录，只拷 `SKILL.md` 不行：决策规则在 `SKILL.md`，图型索引在
+`catalog.md`，取值在 `tokens.py`，校验器在 `scripts/validate.py`。
+
+**当 Python 库用的**——纯标准库，不用装任何东西，把仓库放进 `sys.path` 即可：
+
+```python
+import sys; sys.path.insert(0, "/path/to/inkstone")   # 或者设 PYTHONPATH
+from charts.rank_bars import rank_bars
+from scripts.render import render
+
+svg = rank_bars([("华东", 128), ("华北", 96), ("华南", 71)],
+                title="华东最高，是华南的 1.8 倍",
+                subtitle="2026 上半年 · 单位：万元",
+                source="数据来源：内部财务", unit="万元")
+render(svg, "mine", outdir=".")      # -> mine.svg + mine.pdf + mine.png@300dpi
+```
+
+**只想要这套规范的**——读 [SKILL.md](SKILL.md)（决策规则）和 [catalog.md](catalog.md)
+（图型索引：数据形状 / 版心 / 类目上限 / 失效条件）。
+
+交付前跑校验器，退出码就是闸门：
+
+```bash
+python3 scripts/validate.py out/*.svg
+```
+
+`0` 全部合规 · `1` 有不合格，或某份读不了 · `2` 没给参数——glob 匹配不到文件
+就是这种情况，一张图都没有不该算通过。
+
+PDF / PNG 导出需要 `brew install librsvg`（或 `apt install librsvg2-bin`）；
+只要 SVG 的话什么都不用装。
+
+> PyPI 上的 `inkstone` 是另一个项目（RCWA 电磁场求解器），与本项目无关。
+> 本项目按目录分发，不上 PyPI。
+
+## 长什么样
+
+<img src="docs/gallery/ex1-population.png" width="49%"> <img src="docs/gallery/ex2-life-expectancy.png" width="49%">
+
+左边 R1 定序条、右边 D3 五数摘要，都是 85mm 单栏原尺寸——两张并排正好拼成一个
+170mm 双栏。**栏宽档位这件事，图自己演示完了。**
+
+![矩阵热力](docs/gallery/m1-matrix-heat.png)
+
+M1 矩阵热力。深色格里的数字翻成纸白，而「这块底色到底盖没盖住这行字」是机器判的：
+白字飘到白纸上，灰度审阅时看不见。
+
+![小倍数网格](docs/gallery/s3-small-multiples.png)
+
+![蜂群](docs/gallery/d2-beeswarm.png)
+
+十三张图型见下面的[图型](#图型)一节；真实数据成品见 [examples/](examples/README.md)。
 
 ## 为什么不是又一个 HTML 图表库
 
@@ -43,10 +115,11 @@ python3 tests/run.py
 | 反例 | 校验器仍抓得住违规，命中数不少于预期——防止规则被悄悄改弱 |
 | 选型 | `examples/` 每个例子都写了 3 个候选和淘汰理由，且理由要落到数据形状或 catalog 的失效条件上——SKILL.md 分量最重的一条要求，第一次有产物也第一次被判 |
 | 闸门 | `validate.py` 的退出码本身要对：**不给参数必须失败**（glob 匹配不到文件就是零参数，照旧 exit 0 等于在「一张图都没有」时放行），坏文件不会中断整个循环 |
+| 画廊 | `docs/gallery/` 里的 SVG 必须与当场重跑的产物字节一致（PNG 不断字节——跨 librsvg 版本会变）；README 的图链接和普通链接都要指向真实存在的文件 |
 | 盲区 | 十三处定点突变（px 换 pt、viewBox 翻倍、条跑到纸外、点缩到地板下、混进渐变、描边灰度过近……），每处都必须被**对应的那条**规则点名。只数命中条数是不够的：删掉一条规则、另一条恰好多吐一条，总数不变 |
 | 越界 | 七道类目上限都会拒绝超限数据，且**报错必须是这道守卫自己说的话**——只看抛没抛 ValueError，被别的守卫顶包也算过；R3 的每点当量随量级无上限地走 |
 | 界内 | 恰好取到声明的上限那一档，十二处全都画得出来且合规——只测「超限被拒」的话，声明 ≤6 而第 6 条画不出来这种事没人会发现 |
-| 数值 | 数值永不排成科学计数法（`:,g` 在 \|v\| ≥ 1e6 时会把营收印成「1.23457e+06」），函数与产物两头都判 |
+| 数值 | 数值永不排成科学计数法（`:,g` 在 \|v\| ≥ 1e6 时会把营收印成「1.23457e+06」）；数字↔单位的边界有规则——数量级词紧贴（14.5亿）、量词留空（1,840 件）。此前是裸拼接，同一行来源里会同时出现「箱宽 5分钟」和「10 箱」 |
 | 负值 | 长度编码的七张图拒绝负值；R2 分岔条照画不误 |
 | 退化 | 十六处空输入全部友好拒绝；全等值样本仍要画得出来 |
 | 留位 | 标签抽稀按实测宽度，退回字符数估宽会被校验器抓住 |
@@ -59,10 +132,10 @@ python3 tests/run.py
 | 目录闭环 | catalog 每个编号都有实现、标记块和渲染产物 |
 | 灰度等价 | 13 张 × 3 套色板 = 39 组，逐处用色的明度与 mono 版一致（实测最大偏差 0.4 L\*）。现场渲染，不依赖 `out/pal-*.svg` 存在 |
 
-二十八条失败路径都验证过真的会失败。原有五条：削弱校验器、引入随机数、把热力档位
+三十条失败路径都验证过真的会失败。原有五条：削弱校验器、引入随机数、把热力档位
 改回死区、catalog 声明不存在的实现、色板明度偏离阶梯。
 
-后加的二十三条：把原语的颜色默认参数写回函数签名（切色板后会漏出 mono 灰）·
+后加的二十五条：把原语的颜色默认参数写回函数签名（切色板后会漏出 mono 灰）·
 撤掉 R1 的负值守卫 · 撤掉空数据守卫 · 把标签抽稀退回按字符数估宽 ·
 把灰度判定退回只比文档里相邻的两个色 · 撤掉四件套校验 · 把图形区高度写回
 硬编码常数 · 在 PLOT_ASPECT 里留一个没人调用的档 · 撤掉 D1 首尾箱边的锚点 ·
@@ -173,6 +246,7 @@ CI 徽标指向的 workflow 文件是否存在（徽标坏掉不报错，只会�
 - [x] 五档栏宽全部纳入测试（此前只跑过 single / double 两档）
 - [x] 文档声明全部机器判：catalog 的上限与「待建」标记、README 的行数与图型表
 - [x] examples/ 三张真实数据成品（世界银行 WDI），选型过程机器判定
+- [x] 受众开门：第一屏放成品图、双语入口、三路安装说明、GitHub About 与 topics
 
 ## 许可
 

@@ -6,6 +6,7 @@
 禁用 random 模块。
 """
 import math
+import unicodedata
 
 
 # ─────────────────────────────────────────────────────────────
@@ -133,7 +134,33 @@ def num(v, unit="", decimals=None):
     s = f"{v:,.{decimals}f}"
     if auto and "." in s:
         s = s.rstrip("0").rstrip(".")
-    return s + unit
+    return s + _unit_gap(unit) + unit
+
+
+# 数量级词是数字的一部分，紧贴：14.5亿、3,200万。
+# 量词是另一个词，要留空：1,840 件、31.5 分钟、150 天。
+# 拉丁与符号单位按拉丁惯例紧贴：23.8%、12kg。
+_MAGNITUDE = "万亿千百兆"
+
+
+def _unit_gap(unit):
+    """数字和单位之间要不要留一个空格。
+
+    这条规则此前根本不存在，是裸拼接——于是**同一行来源里**会同时出现
+    「箱宽 5分钟」和「10 箱」（d1-step-histogram 实测），同一张图里出现
+    「14.5亿」和「比中国多 4,196 万」。一个把间隔号量到 0.278em vs 1.000em
+    的项目，却没给数字↔汉字的边界定规则，是唯一一处自己拆自己台的地方。
+
+    留空与否不是一刀切：万/亿/千是数量级词，读者把「14.5亿」当一个数读，
+    中间插空格反而把它掰成两半；而「件」「分钟」「天」是量词，是数字之后
+    的另一个词，不留空就挤在一起。
+    """
+    if not unit:
+        return ""
+    head = unit[0]
+    if head in _MAGNITUDE:
+        return ""
+    return " " if unicodedata.east_asian_width(head) in ("W", "F") else ""
 
 
 def fmt(v, decimals=0):

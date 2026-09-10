@@ -2,7 +2,7 @@
 """R3 点阵瀑布 · 可数单位的排名比较（项数多）"""
 import tokens as T
 from charts import _svg as S
-from charts._data import fmt, require, require_nonneg
+from charts._data import fmt, require, require_nonneg, num
 
 
 # ════ R3 点阵瀑布 ════
@@ -83,7 +83,7 @@ def dot_cascade(data, title=None, subtitle=None, source=None,
         parts.append(S.text(x0, y + lab_h,
                             S.ellipsize(name, inner - 60, T.SIZE["label"]),
                             T.SIZE["label"], T.GRAY[2]))
-        parts.append(S.text(x1, y + lab_h, fmt(v, 0) + unit, T.SIZE["value"],
+        parts.append(S.text(x1, y + lab_h, num(v, unit, 0), T.SIZE["value"],
                             T.GRAY[0], T.WEIGHT["value"], anchor="end"))
         dy = y + lab_h + 4 + r
         for k in range(n_dots):
@@ -92,6 +92,6 @@ def dot_cascade(data, title=None, subtitle=None, source=None,
         y = dy + (lines - 1) * pitch + r + row_gap
 
     H = y + T.GAP["plot_source"] + T.SIZE["source"] - row_gap + 4
-    note = f"一个点 = {fmt(per_dot, 0)}{unit} · 每 {group} 点一组"
+    note = f"一个点 = {num(per_dot, unit, 0)} · 每 {group} 点一组"
     src = f"{source} · {note}" if source else note
     return S.canvas(W, H, "\n".join(parts), title, subtitle, src)

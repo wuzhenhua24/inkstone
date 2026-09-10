@@ -5,6 +5,9 @@ from charts import _svg as S
 from charts._data import decimals_for, require, require_nonneg
 
 MAX_CATS = 6
+# 方阵与图例之间的最大空隙。超过这个数就不再把图例推到版心右边缘——
+# 254mm 的幻灯片档上右对齐会让「类目3」和「15.2%」之间裂开 130mm。
+LEGEND_GAP_MAX = 48.0
 
 
 # ════ C1 百格方阵 ════
@@ -88,10 +91,20 @@ def hundred_grid(data, title=None, subtitle=None, source=None,
     # 窄栏上正好，宽栏上就会在类目名和数字之间裂开一大片空白——格子封顶
     # 之后 slide 档实测裂了 130mm，读者的视线要横跨半张幻灯片才能把
     # 「类目3」和「15.2%」对上。校验器判不出这个：没越界、没压字。
-    lg_right = min(x1, lg_x + sw + 3.5
-                   + S.widest([n for n, _ in data], T.SIZE["label"])
-                   + 8 + S.widest(vals, T.SIZE["value"]))
-    lg_avail = lg_right - lg_x
+    #
+    # 但也不能就近贴着方阵排完了事：那样窄栏上整块内容会缩在左边，
+    # 右侧留出一个 9mm 的洞（实测 c1 左边距 1.5mm、右边距 8.9mm，
+    # 而别的图两边都是 2mm）——1:1 落纸齐左置入，右边就空一块。
+    # 规则是**让空隙吸收余量，但给空隙封顶**：窄栏顶满右边缘，
+    # 宽栏不把类目名和百分比拉开半张幻灯片。
+    lg_w = (sw + 3.5 + S.widest([n for n, _ in data], T.SIZE["label"])
+            + 8 + S.widest(vals, T.SIZE["value"]))
+    # 写成连续的：空隙取「右对齐所需」和「上限」里的小者，再兜一个下限。
+    # 写成阈值判断会有阶跃——刚过阈值那一档会从「顶满」突然掉成一个大洞。
+    lg_x = max(x0 + grid_w + 14.0,
+               min(x1 - lg_w, x0 + grid_w + LEGEND_GAP_MAX))
+    lg_right = lg_x + lg_w
+    lg_avail = lg_w
     for row, idx in enumerate(order):
         y = top + T.SIZE["label"] + row * lg_line
         parts.append(S.rect(lg_x, y - sw + 0.5, sw, sw, ink_of[idx]))

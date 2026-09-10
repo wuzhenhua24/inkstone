@@ -211,6 +211,54 @@ except ValueError:
 if not blown:
     ok("R3 每点当量随量级无上限地走，显式传的装不下时当场拒绝")
 
+# 4.004 · 画廊 ────────────────────────────────────────────────
+# README 里的图是这个项目对外的橱窗，而橱窗最容易悄悄过期：图型改了、
+# token 改了，docs/gallery/ 里那份还是三个月前的样子，谁也不会发现——
+# 图看起来"就那样"，diff 里也只是一堆二进制。
+#
+# 判定拿 SVG 做，不拿 PNG 做：SVG 是确定性的（跑两次字节一致），所以
+# 「入库的这份 == 当场重跑出来的那份」是个干净的等式；PNG 跨 librsvg
+# 版本会变，macOS 和 CI 的 runner 就不是同一个结果，拿它断字节必然误报。
+group("画廊")
+sys.path.insert(0, os.path.join(ROOT, "scripts"))
+import gallery as _gal
+
+_stale = []
+for _stem in _gal.PICKS:
+    _keep = os.path.join("docs", "gallery", f"{_stem}.svg")
+    _fresh = os.path.join("out", f"{_stem}.svg")
+    if not os.path.exists(_keep):
+        _stale.append(f"{_stem}.svg 没有入库")
+    elif not os.path.exists(_fresh):
+        _stale.append(f"{_stem}.svg 不在本次产物里——PICKS 里的名字写错了？")
+    elif open(_keep, "rb").read() != open(_fresh, "rb").read():
+        _stale.append(f"{_stem}.svg 与当场重跑的不一致——画廊过期了，"
+                      f"跑 python3 scripts/gallery.py")
+    if not os.path.exists(os.path.join("docs", "gallery", f"{_stem}.png")):
+        _stale.append(f"{_stem}.png 没有入库——README 会显示成裂图")
+# README 里引用的图必须真的存在。图链接坏掉 GitHub 只显示一个裂图图标，
+# 不报错，而访客看到的就是"这项目没人维护"。
+for _md in ("README.md", os.path.join("examples", "README.md")):
+    if not os.path.exists(_md):
+        continue
+    # 图片和普通链接都要查。只查 `![]()` 的话，README 顶部那条
+    # 「English: README.en.md」死链不会被发现——它不显示裂图，只是点了 404，
+    # 而那正好是英文读者看到的第二行。
+    _body = open(_md, encoding="utf-8").read()
+    for _rel in re.findall(r"!?\[[^\]]*\]\(([^)]+)\)", _body):
+        if _rel.startswith(("http", "#", "mailto:")):
+            continue
+        # 相对链接按**这份 markdown 自己所在的目录**解析，不是按仓库根。
+        # examples/README.md 里的 ex1_population.py 在 GitHub 上是对的，
+        # 按仓库根去找必然扑空——那是检查错了，不是链接错了。
+        _target = _rel.split("#")[0]
+        if _target and not os.path.exists(os.path.join(os.path.dirname(_md), _target)):
+            _stale.append(f"{_md} 引用的 {_rel} 不存在——链接是死的")
+for _m in _stale:
+    bad(_m)
+if not _stale:
+    ok(f"画廊 {len(_gal.PICKS)} 张与当场重跑的产物字节一致，README 图链接全部有效")
+
 # 4.005 · 选型记录 ────────────────────────────────────────────
 # SKILL.md 第一节第 3 条：「在 catalog.md 里至少比较 3 个候选，写下淘汰理由。
 # 只记录『用了哪张』不算数——选择过程本身是交付物的一部分。」
@@ -445,6 +493,33 @@ elif not _sci:
 # 显式 decimals 仍要补零对齐，不许被自动档的去尾逻辑吃掉
 if _num(95.0, decimals=1) != "95.0" or _num(3, decimals=2) != "3.00":
     bad("num() 传了 decimals 还去尾——同一组数的小数位对不齐了")
+
+# 数字↔单位的边界要有规则，而且不是一刀切：数量级词紧贴、量词留空。
+# 此前是裸拼接，于是**同一行来源里**同时出现「箱宽 5分钟」和「10 箱」。
+GAPS = [(14.5, "亿", "14.5亿"), (3200, "万", "3,200万"),
+        (1840, "件", "1,840 件"), (31.5, "分钟", "31.5 分钟"),
+        (150, "天", "150 天"), (23.8, "%", "23.8%"), (12, "kg", "12kg")]
+_gapbad = [f"num({v}, {u!r}) = {_num(v, u)!r}，应为 {want!r}"
+           for v, u, want in GAPS if _num(v, u) != want]
+for m in _gapbad:
+    bad(f"数字与单位的间隔不对：{m}")
+# 产物里不许再出现数字紧贴量词。三类不在此列：
+#   · 数量级词（万亿千百兆）——它们是数字的一部分，紧贴才对；
+#   · 拉丁与符号单位（%、kg）——按拉丁惯例紧贴；
+#   · 日期序数（1月、5日、2026年）——「1月」是一月，不是「1 个月」。
+#     同一个「分」字在「31.5 分钟」和「3 时 20 分」里角色相反，产物级
+#     正则分不出来；日期这条路径由图型自己格式化，不走 num()，
+#     所以从这条扫描里排除，由 num() 的函数级用例守住真正归它管的那部分。
+_tight = []
+for _n in svgs:
+    for _t in re.findall(r">([^<]*)<", open(os.path.join("out", _n), encoding="utf-8").read()):
+        if re.search(r"\d(?![万亿千百兆年月日时分秒周季])[一-鿿]", _t):
+            _tight.append(f"{_n}: {_t[:28]!r}")
+            break
+for m in _tight[:3]:
+    bad(f"数字紧贴量词，中间没有留空：{m}")
+if not _gapbad and not _tight:
+    ok(f"数字↔单位边界有规则：数量级词紧贴、量词留空，{len(svgs)} 份产物无一违反")
 
 # 4.1 · 负值防护 ───────────────────────────────────────────────
 # 长度 / 个数 / 面积 ∝ 数值的图收到负值时，几何没有对应的画法：
